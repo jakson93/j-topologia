@@ -1,0 +1,1 @@
+Read .config/AGENTS/instructions.md. This is a new independent plugin derived from JMAP 846b38a. Its ID is jakson-j-topologia-panel; never change the original JMAP. Reuse Grafana theme and data frames, do not collect SNMP or credentials. Actual tunnel paths require observed hops; never infer them from traffic. Demo data must be explicitly labeled.

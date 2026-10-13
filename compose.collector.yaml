@@ -1,0 +1,35 @@
+services:
+  jtopologia-collector:
+    build: ./collector
+    restart: unless-stopped
+    environment:
+      JTOPOLOGY_CONFIG: /config/devices.json
+      JTOPOLOGY_DB: /data/jtopology.sqlite
+      JTOPOLOGY_READ_TOKEN_FILE: /run/secrets/api_read_token
+      JTOPOLOGY_ADMIN_TOKEN_FILE: /run/secrets/api_admin_token
+      JTOPOLOGY_STALE_SECONDS: "300"
+    volumes:
+      - ./collector/config:/config:ro
+      - collector-data:/data
+      # Host keys must be verified and installed by the operator, never automatically trusted.
+      - ./collector/config/known_hosts:/home/collector/.ssh/known_hosts:ro
+    secrets:
+      - api_read_token
+      - api_admin_token
+      - device_password
+      - snmp_auth
+      - snmp_priv
+    # Grafana can query on the Docker network. Host access is loopback only by default.
+    ports: ["127.0.0.1:8088:8080"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+secrets:
+  api_read_token: {file: ./collector/secrets/api_read_token}
+  api_admin_token: {file: ./collector/secrets/api_admin_token}
+  device_password: {file: ./collector/secrets/device_password}
+  snmp_auth: {file: ./collector/secrets/snmp_auth}
+  snmp_priv: {file: ./collector/secrets/snmp_priv}
+volumes:
+  collector-data:

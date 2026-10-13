@@ -1,0 +1,40 @@
+{
+  "intervals": {
+    "interfaces": 30,
+    "ospf": 30,
+    "cost": 60,
+    "tunnels": 30,
+    "paths": 30,
+    "services": 300,
+    "pws": 300,
+    "lsps": 300,
+    "identity": 1800
+  },
+  "devices": [
+    {
+      "id": "PE-ATM",
+      "host": "192.0.2.10",
+      "site": "ALTAMIRA",
+      "snmp": {
+        "version": "3",
+        "username": "monitor",
+        "auth_file": "/run/secrets/snmp_auth",
+        "priv_file": "/run/secrets/snmp_priv"
+      },
+      "netconf": {
+        "port": 830,
+        "username": "monitor",
+        "password_file": "/run/secrets/device_password"
+      },
+      "ssh": {
+        "port": 22,
+        "username": "monitor",
+        "password_file": "/run/secrets/device_password",
+        "known_hosts": "/config/known_hosts"
+      },
+      "cli_enabled": true,
+      "vrp_pattern": "Version\\s+5\\.170\\b|V200R[0-9]{3}C[0-9]{2}",
+      "yang_profiles": []
+    }
+  ]
+}

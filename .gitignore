@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.eslintcache
+playwright/.auth/
+playwright-report/
+test-results/
+*.log
+collector/.venv/
+collector/config/
+collector/secrets/
+**/__pycache__/
+.pytest_cache/
+*.sqlite*
+.env
+.build-cache/

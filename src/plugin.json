@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "j-topologia",
+  "id": "jakson-j-topologia-panel",
+  "info": {
+    "keywords": ["panel", "topology", "ospf", "mpls", "transport"],
+    "description": "Topologia de transporte com interfaces, OSPF, caminhos MPLS-TE e diagnóstico de impacto.",
+    "author": { "name": "Jakson" },
+    "logos": { "small": "img/logo.svg", "large": "img/logo.svg" },
+    "links": [],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": { "grafanaDependency": ">=11.6.0", "plugins": [] }
+}

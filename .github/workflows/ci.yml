@@ -1,0 +1,22 @@
+name: j-topologia CI
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: {node-version: '24', cache: npm}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:ci
+      - run: npm run build
+      - run: pip install -r collector/requirements.lock.txt
+      - run: PYTHONPATH=collector python -m pytest collector/tests -q
+      - uses: actions/upload-artifact@v4
+        with: {name: jakson-j-topologia-panel, path: dist/}

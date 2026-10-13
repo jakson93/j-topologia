@@ -1,0 +1,40 @@
+{
+  "uid": "jtopologia-lab",
+  "title": "j-topologia · Laboratório VSI e transporte",
+  "schemaVersion": 41,
+  "version": 1,
+  "tags": [
+    "j-topologia",
+    "laboratório"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "jakson-j-topologia-panel",
+      "title": "j-topologia · Caminhos de serviços",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 25
+      },
+      "options": {
+        "demo": true,
+        "mode": "physical",
+        "routeStyle": "curve",
+        "sidebar": true
+      },
+      "targets": [],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}
