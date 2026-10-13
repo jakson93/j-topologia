@@ -200,11 +200,13 @@ test('demo uses the production adapter and correlates a real fixture dependency 
     snap = provider.getSnapshot(demo.frames, demo.inventory, {}, now);
   expect(snap.nodes).toHaveLength(10);
   expect(snap.links).toHaveLength(12);
-  expect(snap.ospfNeighbors).toHaveLength(12);
+  expect(snap.ospfNeighbors).toHaveLength(24);
+  expect(snap.ospfNeighbors.find((n) => n.localNode === 'ATM' && n.interface === 'Vlanif100')?.cost).toBe(10);
+  expect(snap.ospfNeighbors.find((n) => n.localNode === 'STM' && n.interface === 'Vlanif100')?.cost).toBe(50);
   expect(snap.mplsTunnels).toHaveLength(5);
   expect(snap.incidents.find((i) => i.linkId === 'L6')).toMatchObject({
     tunnelIds: ['TE-RUR-BSB'],
-    neighborIds: ['OSPF-L6'],
+    neighborIds: ['OSPF-L6-A', 'OSPF-L6-B'],
   });
   expect(snap.links.find((l) => l.id === 'L10')?.attenuationDb).toBeGreaterThan(2);
   expect(snap.mplsTunnels.find((t) => t.id === 'TE-STM-ITB')?.primary.evidence).toBe('unavailable');

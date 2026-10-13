@@ -55,3 +55,13 @@ GETs de rede exigem token de leitura; POSTs exigem token administrativo diferent
 - [PySNMP 7.1](https://docs.lextudio.com/pysnmp/v7.1/docs/pysnmp-hlapi-tutorial): API assíncrona GET/WALK.
 
 As referências não comprovam que o mesmo schema/output está presente no S6730 do usuário. A homologação deve comparar dados reais com o perfil antes da produção.
+
+## Coleta do custo OSPF na VLANIF
+
+O collector lê `ospfIfMetricValue` (`1.3.6.1.2.1.14.8.1.4`), com índice `IP-local.0.0` para interfaces IPv4 numeradas e TOS 0, cruzando IP-MIB/ifName. A métrica existe independentemente da descoberta do vizinho. Não há cálculo baseado na capacidade da interface. Referência do índice: [RFC 1850, OSPF Interface Metric Table](https://www.rfc-editor.org/rfc/rfc1850.html#page-40).
+
+Se esse domínio não for entregue por NETCONF/SNMP, o fallback SSH lê `display ospf interface`, `display ospf peer` e `display ip interface brief`. Custo, processo e área são preservados por interface; o inventário IPv4 fornece a máscara /30. A coleta é somente leitura. O contexto SNMP padrão pode não expor todos os processos: valide o perfil CLI com as saídas do VRP instalado antes de usar em produção.
+
+A correlação /30 exige endereços recentes e donos únicos das duas pontas. Não relaciona automaticamente a VLANIF a uma fibra/porta física. Entre nós com várias VLANIFs, a associação do custo a um salto TE exige next-hop/interface observados; quando faltar evidência, o painel mostra a incerteza.
+
+A tunnel policy específica do peer/PW prevalece sobre a padrão da VSI. O nome da policy é exibido com origem e data, mas não substitui a coleta do vínculo PW/túnel, do LSP ativo e dos saltos. Uma policy pode permitir vários túneis; seu nome sozinho não determina o caminho que está em uso.

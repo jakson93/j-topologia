@@ -44,6 +44,14 @@ export function ServiceInspector({
       </div>
       <div className={styles.detailGrid}>
         <div>
+          <small>Tunnel policy deste PW</small>
+          <strong>{p.tunnelPolicy ?? 'Não coletada'}</strong>
+          <small>
+            {p.policyStale ? 'Coleta antiga ou sem data' : 'Configuração coletada'} · {p.policySource ?? 'sem fonte'} ·{' '}
+            {age(p.policyObservedAt, now)}
+          </small>
+        </div>
+        <div>
           <small>PW</small>
           <strong>{p.pwId}</strong>
         </div>
@@ -96,6 +104,7 @@ export function ServiceInspector({
                 <strong>
                   {p.path.segments[i].localIp ?? '—'} → {p.path.segments[i].neighborIp ?? '—'}
                 </strong>
+                <small>{p.path.segments[i].subnet ?? 'Prefixo não coletado'}</small>
               </div>
               <div>
                 <small>Capacidade</small>
@@ -123,6 +132,8 @@ export function ServiceInspector({
                 {p.path.segments[i].costObservedAt
                   ? dateTimeFormat(p.path.segments[i].costObservedAt!, { format: 'HH:mm:ss', timeZone })
                   : 'sem coleta'}
+                {p.path.segments[i].costAssociation === 'unique-peer' &&
+                  ' · contexto lógico entre os nós; porta física não vinculada'}
               </small>
             </div>
           )}
@@ -148,6 +159,8 @@ export function ServiceInspector({
         PE local: {service.vsi.localNode} · VSI ID: {service.vsi.vsiId ?? '—'} ·{' '}
         {service.vsi.status ?? 'Estado não coletado'}
       </small>
+      <p className={styles.notice}>VSI → PW → tunnel policy → túnel em uso → CR-LSP → saltos A → B</p>
+      <small>Policy da VSI: {service.vsi.tunnelPolicy ?? 'Não coletada; consulte a policy de cada PW abaixo'}</small>
       <div className={styles.row}>
         <span className={styles.badge}>{confidenceLabel(service.discoveryConfidence)}</span>
         <span className={styles.badge}>
@@ -170,6 +183,26 @@ export function ServiceInspector({
           </button>
         ))}
       </div>
+      {(service.pseudowires ?? [])
+        .filter((pw) => !service.forward.some((p) => p.pwId === pw.id))
+        .map((pw) => (
+          <div key={pw.id} className={styles.list}>
+            <strong>
+              PW {pw.id} · VC ID {pw.vcId ?? '—'}
+            </strong>
+            <small>
+              Peer {pw.peerRouterId ?? '—'} · tunnel policy {pw.tunnelPolicy ?? 'não coletada'}
+            </small>
+            <small>
+              {pw.policyStale
+                ? 'Policy antiga ou sem coleta válida'
+                : `Policy coletada · ${age(pw.policyObservedAt, now)}`}
+            </small>
+            <p className={styles.warning}>
+              Vínculo ativo PW → túnel → LSP ainda não confirmado. A policy configurada não comprova os saltos em uso.
+            </p>
+          </div>
+        ))}
       {direction !== 'reverse' &&
         (service.forward.length ? (
           service.forward.map((p, i) => path(p, i, 'IDA'))

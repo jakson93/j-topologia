@@ -27,8 +27,8 @@ export const plugin = new PanelPlugin<PanelOptions>(TransportPanel).setPanelOpti
     settings: {
       options: [
         { label: 'Físico', value: 'physical' },
-        { label: 'OSPF', value: 'ospf' },
-        { label: 'MPLS-TE', value: 'mpls' },
+        { label: 'Custos OSPF', value: 'ospf' },
+        { label: 'VSIs', value: 'mpls' },
         { label: 'Tudo', value: 'all' },
       ],
     },

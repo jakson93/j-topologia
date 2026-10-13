@@ -355,6 +355,10 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
       localIp: text(row.localIp),
       process: text(row.process),
       networkType: text(row.networkType),
+      targetNode: text(row.targetNode),
+      targetInterface: text(row.targetInterface),
+      subnet: text(row.subnet),
+      peerResolution: text(row.peerResolution),
     }));
     const ospfNeighbors = ospfConfigs.map((n) => {
       const r = read(n.stateItem);
@@ -364,7 +368,11 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
       if (targets.length > 1) {
         warnings.push(`${n.id}: Router ID do vizinho ambíguo.`);
       }
-      const targetNode = targets.length === 1 ? targets[0].id : undefined;
+      const targetNode = validNodes.has(n.targetNode ?? '')
+        ? n.targetNode
+        : targets.length === 1
+          ? targets[0].id
+          : undefined;
       const matchingLinks = links.filter(
         (l) =>
           (l.source === n.localNode && l.target === targetNode && l.sourceInterface === n.interface) ||
@@ -450,11 +458,7 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
     const nodeStates = nodes.map((n) => {
       const row = nodeRows.get(n.id);
       const snmp = status(n.bindings?.status, row?.snmpStatus, timestamp(row?.observedAt));
-      const related = [
-        ...links.filter((l) => l.source === n.id || l.target === n.id).map((l) => l.health),
-        ...ospfNeighbors.filter((o) => o.localNode === n.id).map((o) => o.health),
-        ...mplsTunnels.filter((t) => t.source === n.id || t.destination === n.id).map((t) => t.health),
-      ];
+      const related = [...links.filter((l) => l.source === n.id || l.target === n.id).map((l) => l.health)];
       return {
         ...n,
         snmp,

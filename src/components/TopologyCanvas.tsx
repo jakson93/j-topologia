@@ -1,6 +1,14 @@
 import React from 'react';
 import { useStyles2, useTheme2 } from '@grafana/ui';
-import { NodeState, PanelOptions, Point, ServicePathRecord, TopologySnapshot, ViewMode } from '../types';
+import {
+  NodeState,
+  PanelOptions,
+  Point,
+  OspfStateRecord,
+  ServicePathRecord,
+  TopologySnapshot,
+  ViewMode,
+} from '../types';
 import { getStyles, color } from '../styles';
 import { healthLabel, rate } from '../transportModel';
 
@@ -12,8 +20,6 @@ const NodeCard = React.memo(function NodeCard({
   point,
   selected,
   editing,
-  ospf,
-  mpls,
   onSelect,
   onDrag,
   onDoubleClick,
@@ -22,8 +28,6 @@ const NodeCard = React.memo(function NodeCard({
   point: Point;
   selected: boolean;
   editing: boolean;
-  ospf: string;
-  mpls: string;
   onSelect: () => void;
   onDrag: (event: React.PointerEvent) => void;
   onDoubleClick: () => void;
@@ -74,32 +78,7 @@ const NodeCard = React.memo(function NodeCard({
         {node.hostname.slice(0, 23)}
       </text>
       <text x={-88} y={28} fill={theme.colors.text.secondary} fontSize={theme.typography.bodySmall.fontSize}>
-        OSPF{' '}
-        <tspan
-          fill={
-            ospf === 'FULL'
-              ? theme.colors.success.text
-              : ospf === '—'
-                ? theme.colors.text.secondary
-                : theme.colors.warning.text
-          }
-        >
-          {ospf}
-        </tspan>
-      </text>
-      <text x={18} y={28} fill={theme.colors.text.secondary} fontSize={theme.typography.bodySmall.fontSize}>
-        TE{' '}
-        <tspan
-          fill={
-            mpls === 'UP'
-              ? theme.colors.success.text
-              : mpls === '—'
-                ? theme.colors.text.secondary
-                : theme.colors.error.text
-          }
-        >
-          {mpls}
-        </tspan>
+        {node.routerId ? `RID ${node.routerId}` : (node.model ?? 'Equipamento de transporte')}
       </text>
     </g>
   );
@@ -245,6 +224,66 @@ export function TopologyCanvas({
   snapshot.links.forEach((l) => {
     const k = [l.source, l.target].sort().join(':');
     pairs.set(k, [...(pairs.get(k) ?? []), l.id]);
+  });
+  const costCircuits = new Map<string, OspfStateRecord[]>();
+  snapshot.ospfNeighbors.forEach((n) => {
+    const pair = [n.localNode, n.targetNode ?? n.neighborRouterId].sort().join(':');
+    const key = `${pair}:${n.subnet ?? n.id}`;
+    costCircuits.set(key, [...(costCircuits.get(key) ?? []), n]);
+  });
+  const costPairs = new Map<string, string[]>();
+  costCircuits.forEach((rows, key) => {
+    const pair = [rows[0].localNode, rows[0].targetNode].sort().join(':');
+    costPairs.set(pair, [...(costPairs.get(pair) ?? []), key]);
+    rows.sort((a, b) => a.localNode.localeCompare(b.localNode) || a.interface.localeCompare(b.interface));
+  });
+  const centerY = [...points.values()].reduce((sum, p) => sum + p.y, 0) / Math.max(1, points.size);
+  const obstacles = snapshot.nodes.flatMap((n) => {
+    const p = point(n.id);
+    return p ? [{ x: p.x - 114, y: p.y - 53, w: 228, h: 106 }] : [];
+  });
+  const costLayouts = new Map<string, { x: number; y: number; d: string }>();
+  costCircuits.forEach((rows, key) => {
+    const endpoints = [rows[0].localNode, rows[0].targetNode ?? ''].sort();
+    const a = point(endpoints[0]),
+      b = point(endpoints[1]);
+    if (!a || !b) {
+      return;
+    }
+    const siblings = costPairs.get(endpoints.join(':'))!;
+    const dx = b.x - a.x,
+      dy = b.y - a.y,
+      length = Math.hypot(dx, dy) || 1;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const base =
+      (Math.abs(dy) < 80 && Math.abs(dx) < 410 ? Math.sign(dx) * (mid.y < centerY ? 200 : -200) : 0) +
+      (siblings.indexOf(key) - (siblings.length - 1) / 2) * 90;
+    const h = 26 + rows.length * 24;
+    let best = { offset: base, x: mid.x, y: mid.y, score: Infinity };
+    for (const adjustment of [0, 80, -80, 160, -160, 240, -240, 320, -320, 400, -400]) {
+      const offset = base + adjustment,
+        x = mid.x - ((dy / length) * offset) / 2,
+        y = mid.y + ((dx / length) * offset) / 2;
+      const score = obstacles.reduce(
+        (sum, r) =>
+          sum +
+          Math.max(0, Math.min(x + 83, r.x + r.w) - Math.max(x - 83, r.x)) *
+            Math.max(0, Math.min(y + h / 2 + 4, r.y + r.h) - Math.max(y - h / 2 - 4, r.y)),
+        0
+      );
+      if (score < best.score) {
+        best = { offset, x, y, score };
+      }
+      if (score === 0) {
+        break;
+      }
+    }
+    obstacles.push({ x: best.x - 83, y: best.y - h / 2 - 4, w: 166, h: h + 8 });
+    costLayouts.set(key, {
+      x: best.x,
+      y: best.y,
+      d: `M ${a.x} ${a.y} Q ${mid.x - (dy / length) * best.offset} ${mid.y + (dx / length) * best.offset} ${b.x} ${b.y}`,
+    });
   });
   const highlight = pathLinks.length > 0 || backupLinks.length > 0 || serviceFlows.length > 0;
   return (
@@ -393,7 +432,7 @@ export function TopologyCanvas({
                 >
                   <title>{`${l.name}\n${l.sourceInterface} ↔ ${l.targetInterface}\nRX ${rate(l.values.rx)} · TX ${rate(l.values.tx)}\n${healthLabel[l.health]}${editing ? '\nDuplo clique: adicionar desvio' : ''}`}</title>
                 </path>
-                {!hidden && (!highlight || isPath || isBackup) && (
+                {!hidden && mode !== 'all' && (!highlight || isPath || isBackup) && (
                   <g
                     transform={`translate(${(a.x + b.x) / 2},${(a.y + b.y) / 2 + offset / 2})`}
                     role="button"
@@ -470,50 +509,75 @@ export function TopologyCanvas({
             );
           })}
           {(mode === 'ospf' || mode === 'all') &&
-            snapshot.ospfNeighbors.map((n) => {
-              const a = point(n.localNode),
-                b = point(n.targetNode ?? '');
-              if (!a || !b) {
+            !serviceFlows.length &&
+            [...costCircuits.entries()].map(([key, rows]) => {
+              const n = rows[0];
+              const layout = costLayouts.get(key);
+              if (!layout) {
                 return null;
               }
+              const height = 26 + rows.length * 24;
               return (
-                <g key={n.id}>
+                <g key={key}>
                   <path
-                    d={path(a, b, [], 30)}
+                    d={layout.d}
                     fill="none"
-                    stroke={color(theme, n.health)}
-                    strokeWidth={2}
+                    stroke={theme.colors.info.text}
+                    strokeWidth={rows.some((r) => r.id === selected?.id) ? 3 : 1.5}
                     strokeDasharray="5 5"
                   />
-                  <path
-                    d={path(a, b, [], 30)}
-                    fill="none"
-                    stroke="transparent"
-                    strokeWidth={16}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`OSPF ${n.id} ${n.state}`}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={() => onSelect({ kind: 'ospf', id: n.id })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        onSelect({ kind: 'ospf', id: n.id });
-                      }
-                    }}
-                  >
-                    <title>{`${n.interface} · área ${n.area} · ${n.state}`}</title>
-                  </path>
-                  {(view.scale > 0.6 || selected?.id === n.id) && (
-                    <text
-                      x={(a.x + b.x) / 2}
-                      y={(a.y + b.y) / 2 + 20}
-                      textAnchor="middle"
-                      fill={color(theme, n.health)}
-                      fontSize={theme.typography.bodySmall.fontSize}
-                      pointerEvents="none"
-                    >
-                      {n.localNode} → {n.targetNode} · cost {n.cost ?? '—'} · {n.state}
-                    </text>
+                  {(view.scale > 0.6 || rows.some((r) => r.id === selected?.id)) && (
+                    <g transform={`translate(${layout.x},${layout.y})`}>
+                      <rect
+                        x={-79}
+                        y={-height / 2}
+                        width={158}
+                        height={height}
+                        rx={6}
+                        fill={theme.colors.background.primary}
+                        stroke={theme.colors.border.medium}
+                      />
+                      <text textAnchor="middle" y={-height / 2 + 16} fill={theme.colors.text.secondary} fontSize={11}>
+                        {n.subnet ?? n.interface}
+                      </text>
+                      {rows.map((row, i) => (
+                        <g
+                          key={row.id}
+                          transform={`translate(0,${-height / 2 + 30 + i * 24})`}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Custo OSPF ${row.localNode} para ${row.targetNode}, ${row.interface}: ${row.cost ?? 'não coletado'}`}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={() => onSelect({ kind: 'ospf', id: row.id })}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onSelect({ kind: 'ospf', id: row.id });
+                            }
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <title>{`${row.interface} · ${row.localIp ?? '—'} → ${row.neighborIp ?? '—'}\nÁrea ${row.area} · processo ${row.process ?? 'não coletado'}\nLigação lógica; não comprova a porta física.`}</title>
+                          <rect
+                            x={-76}
+                            y={-11}
+                            width={152}
+                            height={22}
+                            rx={3}
+                            fill={selected?.id === row.id ? theme.colors.info.transparent : 'transparent'}
+                          />
+                          <text
+                            textAnchor="middle"
+                            y={4}
+                            fill={row.cost === undefined ? theme.colors.text.secondary : theme.colors.info.text}
+                            fontSize={theme.typography.bodySmall.fontSize}
+                            fontWeight={600}
+                          >
+                            {row.localNode} → {row.targetNode} · {row.cost ?? '—'}
+                          </text>
+                        </g>
+                      ))}
+                    </g>
                   )}
                 </g>
               );
@@ -608,22 +672,6 @@ export function TopologyCanvas({
             })
           )}
           {snapshot.nodes.map((node, i) => {
-            const nbs = snapshot.ospfNeighbors.filter((n) => n.localNode === node.id),
-              tunnels = snapshot.mplsTunnels.filter((t) => t.source === node.id || t.destination === node.id);
-            const ospf =
-              !nbs.length || nbs.some((n) => n.health === 'unknown')
-                ? '—'
-                : nbs.every((n) => n.state === 'Full')
-                  ? 'FULL'
-                  : nbs.some((n) => n.state === 'Down')
-                    ? 'DOWN'
-                    : 'ATENÇÃO';
-            const mpls =
-              !tunnels.length || tunnels.some((t) => t.health === 'unknown')
-                ? '—'
-                : tunnels.some((t) => t.health === 'down')
-                  ? 'DOWN'
-                  : 'UP';
             return (
               <g key={node.id} opacity={highlight && !pathNodes.includes(node.id) ? 0.4 : 1}>
                 <NodeCard
@@ -631,8 +679,6 @@ export function TopologyCanvas({
                   point={point(node.id) ?? defaultPoint(i)}
                   selected={selected?.id === node.id || connectSource === node.id}
                   editing={editing && !connectSource}
-                  ospf={ospf}
-                  mpls={mpls}
                   onSelect={() => {
                     if (moved.current) {
                       moved.current = false;

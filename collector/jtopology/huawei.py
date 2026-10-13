@@ -62,6 +62,8 @@ def parse_outputs(device: Device, outputs: dict[str,str], observed_at: int) -> B
                 batch.add('nodes',{'id':device.id,'hostname':device.id,'site':device.site or device.id,'routerId':router[2]})
             area=None;interface=None;local_ip=None;count=0
             for line in output.splitlines():
+                current=re.search(r'OSPF Process\s+(\d+)\s+with Router ID\s+(\S+)',line,re.I)
+                if current:router=current;area=None;interface=None;local_ip=None
                 header=re.search(r'Area\s+(\S+)\s+interface\s+(\S+?)\(([^)]+)\)',line,re.I)
                 if header: area,local_ip,interface=header.groups()
                 match=re.search(r'Router ID:\s*(\S+)\s+Address:\s*(\S+)',line,re.I)
@@ -80,12 +82,16 @@ def parse_outputs(device: Device, outputs: dict[str,str], observed_at: int) -> B
             for line in output.splitlines():
                 p=re.search(r'OSPF Process\s+(\d+)',line,re.I)
                 if p: process=p[1]
-                a=re.search(r'Area:\s*(\S+)',line,re.I)
+                a=re.search(r'Area\s*:?\s*(\d+\.\d+\.\d+\.\d+)',line,re.I)
                 if a: area=a[1]
                 m=re.match(r'\s*(\S+)\s+(\d+\.\d+\.\d+\.\d+)\s+(Broadcast|P2P|P2MP|NBMA)\s+(\S+)\s+(\d+)\s+\d+',line,re.I)
-                if m: costs[m[1]]={'cost':int(m[5]),'networkType':m[3],'process':process,'area':area,'localIp':m[2]}
-            for row in batch.tables.get('ospf',[]):
-                if row['interface'] in costs: row.update(costs[row['interface']])
+                if m: costs[(process,m[1])]={'interface':m[1],'cost':int(m[5]),'networkType':m[3],'process':process,'area':area,'localIp':m[2]}
+            for (process,interface),cost in costs.items():
+                matching=[row for row in batch.tables.get('ospf',[]) if row['interface']==interface and row.get('process')==process]
+                if matching:
+                    for row in matching:row.update(cost)
+                else:
+                    batch.add('ospf',{'id':stable(device.id,f'ospf-cost:{process}:{interface}'),'localNode':device.id,**cost})
             if output.strip() and not costs: batch.warnings.append('cost: no recognized interface cost table')
         elif kind=='tunnels':
             blocks=re.split(r'(?=^\s*(?:Tunnel Name\s*:|Tunnel\d[\w/.-]*\s*$))',output,flags=re.M)
@@ -131,8 +137,10 @@ def parse_outputs(device: Device, outputs: dict[str,str], observed_at: int) -> B
                 name=kv(block,'VSI Name')
                 if not name: continue
                 sid=stable(device.id,f'vsi:{name}');vsi_id=kv(block,'VSI ID')
+                head=re.split(r'Peer Ip Address\s*:|Peer IP\s*:',block,flags=re.I)[0]
+                policy=kv(head,'Tunnel Policy Name')
                 batch.add('services',{'id':sid,'name':name,'localNode':device.id,'vsiId':vsi_id,'status':kv(block,'VSI State'),
-                    'encapsulation':kv(block,'Encapsulation Type'),'tunnelPolicy':kv(block,'Tunnel Policy Name')});count+=1
+                    'encapsulation':kv(block,'Encapsulation Type'),'tunnelPolicy':policy});count+=1
                 for pwblock in re.split(r'(?=Peer Ip Address\s*:|Peer IP\s*:)',block,flags=re.I)[1:]:
                     peer=ip(kv(pwblock,'Peer Ip Address') or kv(pwblock,'Peer IP'))
                     vc=kv(pwblock,'VC ID')
@@ -140,7 +148,7 @@ def parse_outputs(device: Device, outputs: dict[str,str], observed_at: int) -> B
                     batch.add('pws',{'id':stable(device.id,f'pw:{name}:{peer}:{vc}'),'serviceId':sid,'sourceNode':device.id,
                         'peerRouterId':peer,'vcId':vc,'status':kv(pwblock,'PW State') or kv(pwblock,'State'),
                         'tunnelToken':kv(pwblock,'Tunnel ID'),'outInterface':kv(pwblock,'Out Interface') or kv(pwblock,'OutInterface'),
-                        'tunnelPolicy':kv(pwblock,'Tunnel Policy Name') or kv(block,'Tunnel Policy Name')})
+                        'tunnelPolicy':kv(pwblock,'Tunnel Policy Name') or policy})
             if output.strip() and not count: batch.warnings.append('services: no recognized VSI records')
         elif kind=='pws':
             # The vcid column supplies the actual PW ID; a VSI ID is not assumed to be its VC ID.
@@ -148,8 +156,11 @@ def parse_outputs(device: Device, outputs: dict[str,str], observed_at: int) -> B
                 sid=stable(device.id,f'vsi:{name}')
                 if not any(s['id']==sid for s in batch.tables.get('services',[])):continue
                 normalized=re.sub(r'^(Tunnel)\s+',r'\1',out.strip(),flags=re.I)
-                batch.add('pws',{'id':stable(device.id,f'pw:{name}:{peer}:{vc}'),'serviceId':sid,'sourceNode':device.id,
-                    'peerRouterId':peer,'vcId':vc,'outInterface':normalized})
+                service=next(s for s in batch.tables['services'] if s['id']==sid)
+                identifier=stable(device.id,f'pw:{name}:{peer}:{vc}')
+                existing=next((p for p in batch.tables.get('pws',[]) if p['id']==identifier),{})
+                batch.add('pws',{'id':identifier,'serviceId':sid,'sourceNode':device.id,
+                    'peerRouterId':peer,'vcId':vc,'outInterface':normalized,'tunnelPolicy':existing.get('tunnelPolicy') or service.get('tunnelPolicy')})
             if output.strip() and not batch.tables.get('pws'): batch.warnings.append('pws: output could not be correlated to parsed VSI peers')
         elif kind=='lsps' and output.strip():
             count=0

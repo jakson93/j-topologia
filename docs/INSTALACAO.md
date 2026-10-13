@@ -2,7 +2,7 @@
 
 ## Painel Grafana
 
-Extraia `jakson-j-topologia-panel-0.1.0.zip` em `/var/lib/grafana/plugins`. O arquivo `plugin.json` deve ficar em `/var/lib/grafana/plugins/jakson-j-topologia-panel/plugin.json`.
+Extraia `jakson-j-topologia-panel-0.2.0.zip` em `/var/lib/grafana/plugins`. O arquivo `plugin.json` deve ficar em `/var/lib/grafana/plugins/jakson-j-topologia-panel/plugin.json`.
 
 No ambiente do serviço Grafana no Portainer:
 
@@ -35,9 +35,9 @@ As opções de parser backend e armazenamento de cabeçalhos sensíveis são doc
 ## Sequência de validação
 
 1. Teste um único Huawei e compare o inventário/VRP/capabilities com as respostas reais.
-2. Confira uma VSI conhecida: PW/VC ID, túnel de saída, CR-LSP ativo e hops.
+2. Confira uma VSI conhecida: PW/VC ID, policy padrão e específica do peer, túnel de saída, CR-LSP ativo e hops.
 3. Faça a mesma leitura no PE remoto e confira a volta separadamente.
-4. Compare cada cost com a interface OSPF correta; confirme a resolução do underlay físico, especialmente em VLANIFs/Eth-Trunks.
+4. Compare o custo de saída nas duas VLANIFs do /30, em ambos os equipamentos, sem presumir valores iguais; confirme a resolução do underlay físico, especialmente em VLANIFs/Eth-Trunks.
 5. Confira se um backup existente está ativo ou somente configurado; valide dados stale e formatos não reconhecidos.
 6. Confira `/collector/status` e os eventos. Não provoque quedas em produção para testar; use um ambiente de homologação ou eventos já ocorridos.
 7. Valide as dependências de um enlace conhecido e o tempo de resposta antes de aumentar o inventário.

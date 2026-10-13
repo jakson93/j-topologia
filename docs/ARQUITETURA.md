@@ -35,6 +35,8 @@ Uma VSI é identificada como instância local em um PE, não apenas pelo nome. A
 - Multi-path lista os registros ativos. Percentuais só aparecem com `distributionMeasured=true`.
 - A resolução física usa interfaces e enlaces sem ambiguidade. Paralelos precisam ser desambiguados.
 - O cost é direcional, com interface/fonte/timestamp próprios; não explica sozinho a decisão TE.
+- O custo é coletado por interface mesmo sem vizinho. Endereços /30 recentes e únicos resolvem o P2P lógico; isso não cria um enlace físico. Com mais de uma VLANIF candidata entre dois nós, o next-hop/interface precisa desambiguar o custo contextual do salto.
+- A policy específica de um PW prevalece sobre a padrão da VSI. Policy, binding, LSP ativo e saltos têm evidências independentes; uma policy antiga não renova a validade do caminho nem serve para inventar saltos.
 - Causa provável e dependência observada não comprovam causalidade nem tráfego efetivo de um serviço.
 - Dados stale não confirmam impacto ativo. A proveniência é mantida por campo, evitando renovar o timestamp de um path antigo ao atualizar apenas seu status.
 

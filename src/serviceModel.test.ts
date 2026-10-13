@@ -12,6 +12,13 @@ test('reads independent directional service records and reverse dependencies', (
   const snapshot = demo(),
     service = snapshot.services[0];
   expect(service.vsi.name).toContain('CLIENTE-300');
+  expect(service.forward[0]).toMatchObject({ tunnelPolicy: 'TP-CORPORATIVO-ATM', policyStale: false });
+  expect(service.reverse[0]).toMatchObject({ tunnelPolicy: 'TP-CORPORATIVO-BSB', policyStale: false });
+  expect(service.forward[0].path?.segments[0]).toMatchObject({
+    costInterface: 'Vlanif100',
+    ospfCost: 10,
+    subnet: '172.20.0.0/30',
+  });
   expect(service.asymmetric).toBe(true);
   expect(service.forward[0].path?.hops.map((h) => h.nodeId)).not.toEqual(
     service.reverse[0].path?.hops.map((h) => h.nodeId).reverse()
@@ -30,6 +37,7 @@ test('stale service records cannot imply current paths, symmetry or impact', () 
   };
   const stale = serviceAnalysis(row, now + 600000, 300000)!;
   expect(stale.forward[0].path?.actual).toBe(false);
+  expect(stale.forward[0].policyStale).toBe(true);
   expect(stale.asymmetric).toBeUndefined();
   expect(serviceDependencies([stale], 'L2')).toEqual([]);
 });

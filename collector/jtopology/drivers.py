@@ -213,6 +213,9 @@ class SnmpDriver:
                         'errorCounter':number('errors'),'discardCounter':number('discards'),'lldpPeers':peers,'logical':name.lower().startswith(('vlanif','eth-trunk','loopback','tunnel'))})
             if groups & {'ospf','cost'}:
                 for name,oid in {'nbrRouter':'1.3.6.1.2.1.14.10.1.3','nbrState':'1.3.6.1.2.1.14.10.1.6','ifArea':'1.3.6.1.2.1.14.7.1.3','ifCost':'1.3.6.1.2.1.14.8.1.4'}.items(): await walk(name,oid)
+                from .ospf import snmp_cost_rows
+                for row in snmp_cost_rows(device,tables):
+                    batch.add('ospf',{'id':stable(device.id,f'ospf-cost:snmp:{row["interface"]}:{row["localIp"]}:{row.get("neighborRouterId") or "interface"}'),**row})
                 for index,peer in tables['nbrRouter'].items():
                     neighbor='.'.join(index.split('.')[:4]); matches=[]
                     for address,if_index in tables['ipIfIndex'].items():
@@ -223,6 +226,7 @@ class SnmpDriver:
                         batch.warnings.append('SNMP neighbor has no unique local interface mapping');continue
                     address,if_index=matches[0];name=tables['ifName'].get(if_index)
                     if not name:continue
+                    if any(r.get('neighborRouterId')==peer and r.get('interface')==name for r in batch.tables.get('ospf',[])):continue
                     cost=tables['ifCost'].get(f'{address}.0.0');area=tables['ifArea'].get(f'{address}.0')
                     batch.add('ospf',{'id':stable(device.id,f'ospf:snmp:{name}:{peer}'),'localNode':device.id,'neighborRouterId':peer,'neighborIp':neighbor,'interface':name,
                         'localIp':address,'area':area,'state':tables['nbrState'].get(index),'cost':int(cost) if cost and cost.isdigit() else None})

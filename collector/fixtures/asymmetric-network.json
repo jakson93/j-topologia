@@ -28,7 +28,22 @@
         "observedAt": 1791903600000
       }
     ],
-    "jtopology_interfaces": [],
+    "jtopology_interfaces": [
+      {
+        "id": "A:Vlanif100",
+        "nodeId": "A",
+        "name": "Vlanif100",
+        "ipv4": "[\"172.20.0.1/30\"]",
+        "observedAt": 1791903600000
+      },
+      {
+        "id": "B:Vlanif100",
+        "nodeId": "B",
+        "name": "Vlanif100",
+        "ipv4": "[\"172.20.0.2/30\"]",
+        "observedAt": 1791903600000
+      }
+    ],
     "jtopology_links": [
       {
         "id": "AB",
@@ -69,24 +84,38 @@
     ],
     "jtopology_ospf": [
       {
-        "id": "ospf-ab",
+        "id": "a-cost",
         "localNode": "A",
-        "neighborRouterId": "10.0.0.2",
-        "interface": "GE1",
+        "interface": "Vlanif100",
+        "localIp": "172.20.0.1",
         "cost": 10,
-        "observedAt": 1791903600000,
-        "dataSource": "snmp",
-        "costObservedAt": 1791903600000,
-        "costSource": "snmp"
-      },
-      {
-        "id": "ospf-ba",
-        "localNode": "B",
-        "neighborRouterId": "10.0.0.1",
-        "interface": "GE2",
-        "cost": 100,
+        "process": "1",
         "observedAt": 1791903600000,
         "dataSource": "cli",
+        "subnet": "172.20.0.0/30",
+        "targetNode": "B",
+        "neighborIp": "172.20.0.2",
+        "targetInterface": "Vlanif100",
+        "peerResolution": "numbered-/30",
+        "neighborRouterId": "10.0.0.2",
+        "costObservedAt": 1791903600000,
+        "costSource": "cli"
+      },
+      {
+        "id": "b-cost",
+        "localNode": "B",
+        "interface": "Vlanif100",
+        "localIp": "172.20.0.2",
+        "cost": 80,
+        "process": "2",
+        "observedAt": 1791903600000,
+        "dataSource": "cli",
+        "subnet": "172.20.0.0/30",
+        "targetNode": "A",
+        "neighborIp": "172.20.0.1",
+        "targetInterface": "Vlanif100",
+        "peerResolution": "numbered-/30",
+        "neighborRouterId": "10.0.0.1",
         "costObservedAt": 1791903600000,
         "costSource": "cli"
       }
@@ -132,7 +161,7 @@
         "kind": "observed",
         "observedAt": 1791903600000,
         "dataSource": "cli",
-        "segments": "[{\"capacityBps\": null, \"costInterface\": \"GE1\", \"costObservedAt\": 1791903600000, \"costSource\": \"snmp\", \"forwardBps\": null, \"linkId\": \"AB\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": 10, \"reverseBps\": null, \"rxBps\": null, \"source\": \"A\", \"sourceInterface\": \"GE1\", \"target\": \"B\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"BC\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"B\", \"sourceInterface\": \"GE1\", \"target\": \"C\", \"targetInterface\": \"GE2\", \"txBps\": null}]",
+        "segments": "[{\"capacityBps\": null, \"costAssociation\": \"unique-peer\", \"costInterface\": \"Vlanif100\", \"costObservedAt\": 1791903600000, \"costSource\": \"cli\", \"forwardBps\": null, \"linkId\": \"AB\", \"localIp\": \"172.20.0.1\", \"neighborIp\": \"172.20.0.2\", \"ospfCost\": 10, \"reverseBps\": null, \"rxBps\": null, \"source\": \"A\", \"sourceInterface\": \"GE1\", \"subnet\": \"172.20.0.0/30\", \"target\": \"B\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"BC\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"B\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"C\", \"targetInterface\": \"GE2\", \"txBps\": null}]",
         "issues": "[]",
         "stale": false,
         "actual": true,
@@ -146,7 +175,7 @@
         "kind": "observed",
         "observedAt": 1791903600000,
         "dataSource": "cli",
-        "segments": "[{\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"CD\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"C\", \"sourceInterface\": \"GE1\", \"target\": \"D\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"DA\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"D\", \"sourceInterface\": \"GE1\", \"target\": \"A\", \"targetInterface\": \"GE2\", \"txBps\": null}]",
+        "segments": "[{\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"CD\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"C\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"D\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"DA\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"D\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"A\", \"targetInterface\": \"GE2\", \"txBps\": null}]",
         "issues": "[]",
         "stale": false,
         "actual": true,
@@ -160,7 +189,8 @@
         "localNode": "A",
         "vsiId": "300",
         "status": "up",
-        "observedAt": 1791903600000
+        "observedAt": 1791903600000,
+        "tunnelPolicy": "TP-DEFAULT-A"
       },
       {
         "id": "C:VSI300",
@@ -168,7 +198,8 @@
         "localNode": "C",
         "vsiId": "300",
         "status": "up",
-        "observedAt": 1791903600000
+        "observedAt": 1791903600000,
+        "tunnelPolicy": "TP-DEFAULT-C"
       }
     ],
     "jtopology_pws": [
@@ -180,7 +211,8 @@
         "vcId": "300",
         "outInterface": "Tunnel1",
         "observedAt": 1791903600000,
-        "dataSource": "cli"
+        "dataSource": "cli",
+        "tunnelPolicy": "TP-PEER-A"
       },
       {
         "id": "C:PW300",
@@ -190,7 +222,8 @@
         "vcId": "300",
         "outInterface": "Tunnel1",
         "observedAt": 1791903600000,
-        "dataSource": "cli"
+        "dataSource": "cli",
+        "tunnelPolicy": "TP-PEER-C"
       }
     ],
     "jtopology_bindings": [
@@ -215,9 +248,10 @@
     "jtopology_service_paths": [
       {
         "id": "A:VSI300",
-        "vsi": "{\"id\": \"A:VSI300\", \"localNode\": \"A\", \"name\": \"CLIENTE-300\", \"observedAt\": 1791903600000, \"status\": \"up\", \"vsiId\": \"300\"}",
-        "forward": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"A:LSP1\", \"lspRole\": \"primary\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}, {\"hopIndex\": 1, \"nodeId\": \"B\", \"routerId\": \"10.0.0.2\"}, {\"hopIndex\": 2, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}], \"id\": \"A:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"A:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costInterface\": \"GE1\", \"costObservedAt\": 1791903600000, \"costSource\": \"snmp\", \"forwardBps\": null, \"linkId\": \"AB\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": 10, \"reverseBps\": null, \"rxBps\": null, \"source\": \"A\", \"sourceInterface\": \"GE1\", \"target\": \"B\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"BC\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"B\", \"sourceInterface\": \"GE1\", \"target\": \"C\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"A:Tunnel1\"}, \"pathId\": \"A:path1\", \"pwId\": \"A:PW300\", \"tunnelId\": \"A:Tunnel1\"}]",
-        "reverse": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"C:LSP1\", \"lspRole\": \"backup\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}, {\"hopIndex\": 1, \"nodeId\": \"D\", \"routerId\": \"10.0.0.4\"}, {\"hopIndex\": 2, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}], \"id\": \"C:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"C:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"CD\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"C\", \"sourceInterface\": \"GE1\", \"target\": \"D\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"DA\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"D\", \"sourceInterface\": \"GE1\", \"target\": \"A\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"C:Tunnel1\"}, \"pathId\": \"C:path1\", \"pwId\": \"C:PW300\", \"tunnelId\": \"C:Tunnel1\"}]",
+        "vsi": "{\"id\": \"A:VSI300\", \"localNode\": \"A\", \"name\": \"CLIENTE-300\", \"observedAt\": 1791903600000, \"status\": \"up\", \"tunnelPolicy\": \"TP-DEFAULT-A\", \"vsiId\": \"300\"}",
+        "pseudowires": "[{\"id\": \"A:PW300\", \"peerRouterId\": \"10.0.0.3\", \"policyObservedAt\": 1791903600000, \"policySource\": \"cli\", \"policyStale\": false, \"tunnelPolicy\": \"TP-PEER-A\", \"vcId\": \"300\"}]",
+        "forward": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"A:LSP1\", \"lspRole\": \"primary\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}, {\"hopIndex\": 1, \"nodeId\": \"B\", \"routerId\": \"10.0.0.2\"}, {\"hopIndex\": 2, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}], \"id\": \"A:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"A:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costAssociation\": \"unique-peer\", \"costInterface\": \"Vlanif100\", \"costObservedAt\": 1791903600000, \"costSource\": \"cli\", \"forwardBps\": null, \"linkId\": \"AB\", \"localIp\": \"172.20.0.1\", \"neighborIp\": \"172.20.0.2\", \"ospfCost\": 10, \"reverseBps\": null, \"rxBps\": null, \"source\": \"A\", \"sourceInterface\": \"GE1\", \"subnet\": \"172.20.0.0/30\", \"target\": \"B\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"BC\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"B\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"C\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"A:Tunnel1\"}, \"pathId\": \"A:path1\", \"policyObservedAt\": 1791903600000, \"policySource\": \"cli\", \"policyStale\": false, \"pwId\": \"A:PW300\", \"tunnelId\": \"A:Tunnel1\", \"tunnelPolicy\": \"TP-PEER-A\"}]",
+        "reverse": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"C:LSP1\", \"lspRole\": \"backup\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}, {\"hopIndex\": 1, \"nodeId\": \"D\", \"routerId\": \"10.0.0.4\"}, {\"hopIndex\": 2, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}], \"id\": \"C:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"C:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"CD\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"C\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"D\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"DA\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"D\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"A\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"C:Tunnel1\"}, \"pathId\": \"C:path1\", \"policyObservedAt\": 1791903600000, \"policySource\": \"cli\", \"policyStale\": false, \"pwId\": \"C:PW300\", \"tunnelId\": \"C:Tunnel1\", \"tunnelPolicy\": \"TP-PEER-C\"}]",
         "asymmetric": true,
         "multipleActivePaths": false,
         "issues": "[]",
@@ -225,9 +259,10 @@
       },
       {
         "id": "C:VSI300",
-        "vsi": "{\"id\": \"C:VSI300\", \"localNode\": \"C\", \"name\": \"CLIENTE-300\", \"observedAt\": 1791903600000, \"status\": \"up\", \"vsiId\": \"300\"}",
-        "forward": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"C:LSP1\", \"lspRole\": \"backup\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}, {\"hopIndex\": 1, \"nodeId\": \"D\", \"routerId\": \"10.0.0.4\"}, {\"hopIndex\": 2, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}], \"id\": \"C:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"C:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"CD\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"C\", \"sourceInterface\": \"GE1\", \"target\": \"D\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"DA\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"D\", \"sourceInterface\": \"GE1\", \"target\": \"A\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"C:Tunnel1\"}, \"pathId\": \"C:path1\", \"pwId\": \"C:PW300\", \"tunnelId\": \"C:Tunnel1\"}]",
-        "reverse": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"A:LSP1\", \"lspRole\": \"primary\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}, {\"hopIndex\": 1, \"nodeId\": \"B\", \"routerId\": \"10.0.0.2\"}, {\"hopIndex\": 2, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}], \"id\": \"A:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"A:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costInterface\": \"GE1\", \"costObservedAt\": 1791903600000, \"costSource\": \"snmp\", \"forwardBps\": null, \"linkId\": \"AB\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": 10, \"reverseBps\": null, \"rxBps\": null, \"source\": \"A\", \"sourceInterface\": \"GE1\", \"target\": \"B\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"BC\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"B\", \"sourceInterface\": \"GE1\", \"target\": \"C\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"A:Tunnel1\"}, \"pathId\": \"A:path1\", \"pwId\": \"A:PW300\", \"tunnelId\": \"A:Tunnel1\"}]",
+        "vsi": "{\"id\": \"C:VSI300\", \"localNode\": \"C\", \"name\": \"CLIENTE-300\", \"observedAt\": 1791903600000, \"status\": \"up\", \"tunnelPolicy\": \"TP-DEFAULT-C\", \"vsiId\": \"300\"}",
+        "pseudowires": "[{\"id\": \"C:PW300\", \"peerRouterId\": \"10.0.0.1\", \"policyObservedAt\": 1791903600000, \"policySource\": \"cli\", \"policyStale\": false, \"tunnelPolicy\": \"TP-PEER-C\", \"vcId\": \"300\"}]",
+        "forward": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"C:LSP1\", \"lspRole\": \"backup\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}, {\"hopIndex\": 1, \"nodeId\": \"D\", \"routerId\": \"10.0.0.4\"}, {\"hopIndex\": 2, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}], \"id\": \"C:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"C:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"CD\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"C\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"D\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"DA\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"D\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"A\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"C:Tunnel1\"}, \"pathId\": \"C:path1\", \"policyObservedAt\": 1791903600000, \"policySource\": \"cli\", \"policyStale\": false, \"pwId\": \"C:PW300\", \"tunnelId\": \"C:Tunnel1\", \"tunnelPolicy\": \"TP-PEER-C\"}]",
+        "reverse": "[{\"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"distributionPercent\": null, \"lspId\": \"A:LSP1\", \"lspRole\": \"primary\", \"observedAt\": 1791903600000, \"path\": {\"actual\": true, \"dataSource\": \"cli\", \"discoveryConfidence\": \"confirmed\", \"hops\": [{\"hopIndex\": 0, \"nodeId\": \"A\", \"routerId\": \"10.0.0.1\"}, {\"hopIndex\": 1, \"nodeId\": \"B\", \"routerId\": \"10.0.0.2\"}, {\"hopIndex\": 2, \"nodeId\": \"C\", \"routerId\": \"10.0.0.3\"}], \"id\": \"A:path1\", \"issues\": [], \"kind\": \"observed\", \"lspId\": \"A:LSP1\", \"observedAt\": 1791903600000, \"segments\": [{\"capacityBps\": null, \"costAssociation\": \"unique-peer\", \"costInterface\": \"Vlanif100\", \"costObservedAt\": 1791903600000, \"costSource\": \"cli\", \"forwardBps\": null, \"linkId\": \"AB\", \"localIp\": \"172.20.0.1\", \"neighborIp\": \"172.20.0.2\", \"ospfCost\": 10, \"reverseBps\": null, \"rxBps\": null, \"source\": \"A\", \"sourceInterface\": \"GE1\", \"subnet\": \"172.20.0.0/30\", \"target\": \"B\", \"targetInterface\": \"GE2\", \"txBps\": null}, {\"capacityBps\": null, \"costAssociation\": null, \"costInterface\": null, \"costObservedAt\": null, \"costSource\": null, \"forwardBps\": null, \"linkId\": \"BC\", \"localIp\": null, \"neighborIp\": null, \"ospfCost\": null, \"reverseBps\": null, \"rxBps\": null, \"source\": \"B\", \"sourceInterface\": \"GE1\", \"subnet\": null, \"target\": \"C\", \"targetInterface\": \"GE2\", \"txBps\": null}], \"stale\": false, \"tunnelId\": \"A:Tunnel1\"}, \"pathId\": \"A:path1\", \"policyObservedAt\": 1791903600000, \"policySource\": \"cli\", \"policyStale\": false, \"pwId\": \"A:PW300\", \"tunnelId\": \"A:Tunnel1\", \"tunnelPolicy\": \"TP-PEER-A\"}]",
         "asymmetric": true,
         "multipleActivePaths": false,
         "issues": "[]",

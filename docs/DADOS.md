@@ -6,9 +6,9 @@ O panel recebe DataFrames Grafana. O nome de cada frame abaixo deve ser preserva
 |---|---|
 | `jtopology_nodes` | `id`, `hostname`, `site`, `routerId`, `ip`, `model`, `group`, `snmpStatus`, `observedAt` |
 | `jtopology_links` | `id`, `source`, `target`, `sourceInterface`, `targetInterface`, `capacityBps`, `physicalStatus`, `observedAt`, `rxBps`, `txBps`, `latencyMs`, `errorsPerSecond`, `discardsPerSecond` |
-| `jtopology_ospf` | `id`, `localNode`, `neighborRouterId`, `neighborIp`, `interface`, `area`, `state`, `cost`, `costObservedAt`, `costSource`, `process`, `networkType`, `observedAt` |
+| `jtopology_ospf` | `id`, `localNode`, `neighborRouterId`, `localIp`, `neighborIp`, `interface`, `targetNode`, `targetInterface`, `subnet`, `peerResolution`, `area`, `cost`, `costObservedAt`, `costSource`, `process`, `networkType`, `observedAt`; `state` é opcional para diagnóstico interno |
 | `jtopology_tunnels` | `id`, `name`, `source`, `destination`, `operStatus`, `adminStatus`, `activePath`, `primaryLsp`, `backupLsp`, `primaryPath`, `backupPath`, `observedAt` |
-| `jtopology_service_paths` | `id`, `vsi` JSON, `forward` JSON, `reverse` JSON, `asymmetric`, `multipleActivePaths`, `discoveryConfidence`, `issues` JSON |
+| `jtopology_service_paths` | `id`, `vsi` JSON, `pseudowires` JSON, `forward` JSON, `reverse` JSON, `asymmetric`, `multipleActivePaths`, `discoveryConfidence`, `issues` JSON |
 | `jtopology_events` | `id`, `entityId`, `kind` (`physical`/`ospf`/`mpls`), `time`, `severity`, `message` |
 | `jtopology_collector` | `id`, `deviceId`, `protocol`, `status`, `modules` JSON, `observedAt`, `warningCount` |
 
@@ -21,6 +21,14 @@ Valores de tempo: epoch em milissegundos (preferido); os adaptadores de séries 
 As métricas existentes continuam sendo consultadas pelo Grafana. Em modo edição, associe os aliases aos bindings dos enlaces. RX/TX de tráfego devem estar em **bps**; potência RX/TX óptica em **dBm**; latência em **ms**; erros e descartes em **taxas/s**. Não associe contadores cumulativos diretamente a taxas. O collector transforma contadores em taxas apenas com duas amostras válidas e sem reset/wrap.
 
 Para gráficos reais, consulte também o histórico no datasource, ou transforme os registros de `/history/interfaces/<id>?since=<epoch_ms>` em séries com `observedAt` como tempo. Uma tabela com só o último valor não fornece histórico. Os botões de período solicitam outra faixa de tempo ao Grafana; não geram amostras.
+
+## Custos de VLANIF e policies
+
+Cada linha OSPF representa uma saída local; custo A → B e B → A são independentes. Mesmo sem vizinho descoberto, a interface/custo fica disponível na lateral. Interfaces IPv4 recentes e únicas nas duas pontas de um /30 permitem resolver `targetNode`, `targetInterface`, `neighborIp` e `subnet`. Prefixos duplicados, VRFs sobrepostos ou dados antigos impedem essa resolução automática. A linha pontilhada representa um P2P lógico, sem comprovar a fibra usada.
+
+Cada registro em `forward`/`reverse` pode incluir `tunnelPolicy`, `policySource`, `policyObservedAt`, `policyStale`. A policy do PW prevalece sobre a padrão da VSI. `pseudowires` lista também peers sem caminho resolvido. O caminho exige vínculo ativo observado PW → túnel, LSP ativo e saltos reais recentes; policy sozinha não fornece esses saltos.
+
+Os segmentos incluem `costInterface` (VLANIF), `costAssociation` (`next-hop`, `interface` ou `unique-peer`) e `subnet`. `unique-peer` mostra contexto lógico, sem afirmar o vínculo com a porta física. Com circuitos paralelos sem evidência que os diferencie, o custo do segmento fica desconhecido.
 
 ## Overrides opcionais
 

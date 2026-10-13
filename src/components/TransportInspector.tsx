@@ -51,6 +51,21 @@ export function TransportInspector({
   const link = selected?.kind === 'link' ? snapshot.links.find((l) => l.id === selected.id) : undefined;
   const tunnel = selected?.kind === 'tunnel' ? snapshot.mplsTunnels.find((t) => t.id === selected.id) : undefined;
   const neighbor = selected?.kind === 'ospf' ? snapshot.ospfNeighbors.find((n) => n.id === selected.id) : undefined;
+  const reverseCosts = neighbor
+    ? snapshot.ospfNeighbors.filter(
+        (n) =>
+          n.localNode === neighbor.targetNode &&
+          n.targetNode === neighbor.localNode &&
+          (neighbor.subnet
+            ? n.subnet === neighbor.subnet
+            : Boolean(
+                neighbor.localIp &&
+                neighbor.neighborIp &&
+                n.localIp === neighbor.neighborIp &&
+                n.neighborIp === neighbor.localIp
+              ))
+      )
+    : [];
   if (!node && !link && !tunnel && !neighbor) {
     return null;
   }
@@ -61,7 +76,7 @@ export function TransportInspector({
     </div>
   );
   const entity = node ?? link ?? tunnel ?? neighbor!;
-  const title = node?.hostname ?? link?.name ?? tunnel?.name ?? `OSPF · ${neighbor?.neighborRouterId}`;
+  const title = node?.hostname ?? link?.name ?? tunnel?.name ?? `Custo OSPF · ${neighbor?.interface}`;
   const nodeLinks = node ? snapshot.links.filter((l) => l.source === node.id || l.target === node.id) : [];
   const nodeNeighbors = node
     ? snapshot.ospfNeighbors.filter((n) => n.localNode === node.id || n.targetNode === node.id)
@@ -131,16 +146,18 @@ export function TransportInspector({
     <section className={styles.section} aria-label="Detalhes da seleção">
       <div className={styles.row}>
         <small>
-          {node ? 'EQUIPAMENTO' : link ? 'ENLACE FÍSICO' : tunnel ? 'INTELIGÊNCIA MPLS-TE' : 'VIZINHANÇA OSPF'}
+          {node ? 'EQUIPAMENTO' : link ? 'ENLACE FÍSICO' : tunnel ? 'INTELIGÊNCIA MPLS-TE' : 'SAÍDA OSPF / VLANIF'}
         </small>
         <button onClick={() => onSelect(undefined)} aria-label="Fechar detalhes">
           ×
         </button>
       </div>
       <h2>{title}</h2>
-      <span className={styles.badge} style={{ color: color(theme, entity.health), alignSelf: 'flex-start' }}>
-        ● {healthLabel[entity.health]}
-      </span>
+      {!neighbor && !tunnel && (
+        <span className={styles.badge} style={{ color: color(theme, entity.health), alignSelf: 'flex-start' }}>
+          ● {healthLabel[entity.health]}
+        </span>
+      )}
       {node && (
         <>
           <div className={styles.detailGrid}>
@@ -173,20 +190,20 @@ export function TransportInspector({
               </small>
             </button>
           ))}
-          <h4>Vizinhanças OSPF</h4>
+          <h4>Custos de saída / VLANIF</h4>
           {nodeNeighbors.length ? (
             nodeNeighbors.map((n) => (
               <button className={styles.item} key={n.id} onClick={() => onSelect({ kind: 'ospf', id: n.id })}>
                 <span>
-                  {n.neighborRouterId} · {n.state}
+                  {n.localNode} → {n.targetNode ?? n.neighborRouterId ?? 'Não descoberto'} · custo {n.cost ?? '—'}
                 </span>
                 <small>
-                  {n.interface} · área {n.area}
+                  {n.interface} · {n.localIp ?? '—'} → {n.neighborIp ?? '—'}
                 </small>
               </button>
             ))
           ) : (
-            <small>Vizinhanças não coletadas.</small>
+            <small>Custos de interface ainda não coletados.</small>
           )}
         </>
       )}
@@ -275,12 +292,25 @@ export function TransportInspector({
             O período consulta os dados pelo Grafana. O tráfego do enlace pode incluir vários serviços; não representa,
             sozinho, o tráfego de cada túnel.
           </small>
-          <h4>OSPF neste enlace</h4>
+          <h4>Custos OSPF entre estes equipamentos</h4>
+          <small>
+            VLANIF é uma interface lógica. Sem vínculo explícito, estes custos não confirmam a porta ou fibra usada.
+          </small>
           {snapshot.ospfNeighbors
-            .filter((n) => n.linkId === link.id)
+            .filter(
+              (n) =>
+                n.linkId === link.id ||
+                (n.localNode === link.source && n.targetNode === link.target) ||
+                (n.localNode === link.target && n.targetNode === link.source)
+            )
             .map((n) => (
-              <button key={n.id} onClick={() => onSelect({ kind: 'ospf', id: n.id })}>
-                {n.neighborRouterId} · {n.state}
+              <button className={styles.item} key={n.id} onClick={() => onSelect({ kind: 'ospf', id: n.id })}>
+                <strong>
+                  {n.localNode} → {n.targetNode ?? n.neighborRouterId} · custo {n.cost ?? '—'}
+                </strong>
+                <small>
+                  {n.interface} · {n.localIp ?? '—'} → {n.neighborIp ?? '—'} · {n.subnet ?? 'prefixo não coletado'}
+                </small>
               </button>
             ))}
         </>
@@ -290,8 +320,6 @@ export function TransportInspector({
           <div className={styles.detailGrid}>
             {fact('Origem', tunnel.source)}
             {fact('Destino', tunnel.destination)}
-            {fact('Administrativo', tunnel.adminStatus || '—')}
-            {fact('Operacional', tunnel.operStatus || '—')}
             {fact(
               'Caminho ativo informado',
               tunnel.activePath === 'primary' ? 'Principal' : tunnel.activePath === 'backup' ? 'Backup' : 'Não coletado'
@@ -328,28 +356,29 @@ export function TransportInspector({
             {fact('IP vizinho', neighbor.neighborIp || '—')}
             {fact('Interface', neighbor.interface)}
             {fact('Área', neighbor.area)}
-            {fact('Estado observado', neighbor.state)}
             {fact('OSPF cost →', neighbor.cost)}
+            {fact('Custo remoto ←', reverseCosts.length === 1 ? reverseCosts[0].cost : 'Não resolvido')}
             {fact('Processo', neighbor.process || 'Não identificado')}
             {fact('IP local', neighbor.localIp || '—')}
             {fact('Tipo de rede', neighbor.networkType || '—')}
             {fact('Fonte do cost', neighbor.dataSource || 'Não informada')}
             {fact('Coleta do cost', age(neighbor.costObservedAt, now))}
-            {fact('Estado esperado', neighbor.expectedState ?? 'Full')}
+            {fact('Sub-rede P2P', neighbor.subnet || 'Não coletada')}
+            {fact('VLANIF remota', neighbor.targetInterface || 'Não resolvida')}
             {fact('Última coleta', age(neighbor.observedAt, now))}
             {fact('Última alteração', neighbor.lastChange ? dateTimeFormat(neighbor.lastChange, { timeZone }) : '—')}
-            {fact('Quedas na janela', neighbor.flapCount)}
-            {fact('Transições coletadas', neighbor.transitions)}
           </div>
           <small>
-            Em redes broadcast, 2-Way pode ser esperado entre DROTHERs. Configure expectedState para evitar classificar
-            uma vizinhança válida como falha.
+            O custo pertence à saída local desta VLANIF. A saída remota pode ter outro valor. A relação /30 é lógica e
+            não identifica, sozinha, a porta física.
           </small>
           {neighbor.linkId && (
             <button onClick={() => onSelect({ kind: 'link', id: neighbor.linkId! })}>Investigar enlace físico</button>
           )}
           {!neighbor.targetNode && (
-            <p className={styles.warning}>Router ID vizinho sem correspondência única no inventário.</p>
+            <p className={styles.warning}>
+              Extremidade remota não resolvida com evidência única. O custo local continua disponível.
+            </p>
           )}
         </>
       )}
@@ -360,7 +389,9 @@ export function TransportInspector({
             relatedTunnels.map((t) => (
               <button className={styles.item} key={t.id} onClick={() => onSelect({ kind: 'tunnel', id: t.id })}>
                 <strong>{t.name}</strong>
-                <small>{healthLabel[t.health]}</small>
+                <small>
+                  {t.source} → {t.destination}
+                </small>
               </button>
             ))
           ) : (

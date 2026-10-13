@@ -31,7 +31,7 @@ class NetworkCollector:
                 if not enabled or not needed:continue
                 requested=set(needed)
                 if driver.source=='cli':
-                    if 'cost' in requested:requested.add('ospf')
+                    if 'cost' in requested:requested.update({'ospf','interfaces'})
                     if 'pws' in requested:requested.add('services')
                 started=time.monotonic()
                 try:

@@ -53,6 +53,10 @@ export type OspfNeighbor = {
   localIp?: string;
   process?: string;
   networkType?: string;
+  targetNode?: string;
+  targetInterface?: string;
+  subnet?: string;
+  peerResolution?: string;
 };
 export type TunnelPath = {
   /** Ordered node IDs or Router IDs, including the two endpoints. */
@@ -160,8 +164,16 @@ export type ServiceSegment = {
   forwardBps?: number;
   reverseBps?: number;
   costInterface?: string;
+  costAssociation?: string;
+  subnet?: string;
 };
-export type ServicePathRecord = {
+export type ServicePolicy = {
+  tunnelPolicy?: string;
+  policySource?: string;
+  policyObservedAt?: number;
+  policyStale?: boolean;
+};
+export type ServicePathRecord = ServicePolicy & {
   pwId: string;
   tunnelId: string;
   lspId: string;
@@ -192,6 +204,7 @@ export type ServicePathRecord = {
 };
 export type ServiceAnalysis = {
   id: string;
+  pseudowires?: Array<ServicePolicy & { id: string; peerRouterId?: string; vcId?: string }>;
   vsi: {
     id: string;
     name: string;
@@ -200,6 +213,7 @@ export type ServiceAnalysis = {
     status?: string;
     observedAt?: number;
     dataSource?: string;
+    tunnelPolicy?: string;
   };
   forward: ServicePathRecord[];
   reverse: ServicePathRecord[];

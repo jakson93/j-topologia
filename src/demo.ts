@@ -96,18 +96,29 @@ export function demoData(now: number) {
     ),
     table(
       'jtopology_ospf',
-      links.map((l, i) => ({
-        id: `OSPF-${l.id}`,
-        localNode: l.source,
-        neighborRouterId: nodes.find((n) => n.id === l.target)!.routerId,
-        neighborIp: nodes.find((n) => n.id === l.target)!.ip,
-        interface: l.sourceInterface,
-        area: '0.0.0.0',
-        linkId: l.id,
-        state: i === 5 ? 'Down' : 'Full',
-        observedAt: now,
-        lastChange: now - (i === 5 ? 240000 : 86400000),
-      }))
+      links.flatMap((l, i) =>
+        [false, true].map((reverse) => ({
+          id: `OSPF-${l.id}-${reverse ? 'B' : 'A'}`,
+          localNode: reverse ? l.target : l.source,
+          neighborRouterId: nodes.find((n) => n.id === (reverse ? l.source : l.target))!.routerId,
+          localIp: `172.20.0.${i * 4 + (reverse ? 2 : 1)}`,
+          neighborIp: `172.20.0.${i * 4 + (reverse ? 1 : 2)}`,
+          subnet: `172.20.0.${i * 4}/30`,
+          interface: `Vlanif${100 + i}`,
+          targetInterface: `Vlanif${100 + i}`,
+          area: '0.0.0.0',
+          process: '1',
+          networkType: 'P2P',
+          peerResolution: 'numbered-/30',
+          linkId: l.id,
+          cost: reverse ? 50 + i * 5 : 10 + i * 5,
+          costObservedAt: now,
+          dataSource: 'fixture',
+          state: i === 5 ? 'Down' : 'Full',
+          observedAt: now,
+          lastChange: now - (i === 5 ? 240000 : 86400000),
+        }))
+      )
     ),
     table('jtopology_tunnels', [
       {
@@ -195,12 +206,12 @@ export function demoData(now: number) {
         message: 'NPR ↔ BSB · interface perdeu portadora',
       },
       {
-        id: 'demo-restore',
+        id: 'demo-cost',
         entityId: 'L2',
         kind: 'ospf',
         time: now - 900000,
-        severity: 'restored',
-        message: 'STM ↔ ALQ · adjacência restaurada (FULL)',
+        severity: 'warning',
+        message: 'STM → ALQ · custo da Vlanif101 alterado de 100 para 15',
       },
     ]),
   ];
@@ -210,12 +221,16 @@ export function demoData(now: number) {
     lspId: string,
     hops: string[],
     linkIds: string[],
-    cost: number
+    tunnelPolicy = hops[0] === 'ATM' ? 'TP-CORPORATIVO-ATM' : 'TP-CORPORATIVO-BSB'
   ) => ({
     pwId,
     tunnelId,
     lspId,
     lspRole: 'primary',
+    tunnelPolicy,
+    policySource: 'fixture',
+    policyObservedAt: now,
+    policyStale: false,
     dataSource: 'fixture',
     observedAt: now,
     discoveryConfidence: 'confirmed',
@@ -231,7 +246,10 @@ export function demoData(now: number) {
           linkId: id,
           sourceInterface: l.source === hops[i] ? l.sourceInterface : l.targetInterface,
           targetInterface: l.source === hops[i] ? l.targetInterface : l.sourceInterface,
-          ospfCost: cost + i * 10,
+          ospfCost: (l.source === hops[i] ? 10 : 50) + links.indexOf(l) * 5,
+          localIp: `172.20.0.${links.indexOf(l) * 4 + (l.source === hops[i] ? 1 : 2)}`,
+          neighborIp: `172.20.0.${links.indexOf(l) * 4 + (l.source === hops[i] ? 2 : 1)}`,
+          subnet: `172.20.0.${links.indexOf(l) * 4}/30`,
           costSource: 'fixture',
           costObservedAt: now,
           capacityBps: l.capacityBps,
@@ -239,7 +257,7 @@ export function demoData(now: number) {
           txBps: load * 0.72e9,
           forwardBps: load * (l.source === hops[i] ? 0.72 : 1) * 1e9,
           reverseBps: load * (l.source === hops[i] ? 1 : 0.72) * 1e9,
-          costInterface: l.sourceInterface,
+          costInterface: `Vlanif${100 + links.indexOf(l)}`,
         };
       }),
       actual: true,
@@ -255,16 +273,14 @@ export function demoData(now: number) {
     'TE-ATM-BSB',
     'LSP-ATM-BSB-01',
     ['ATM', 'STM', 'ALQ', 'MED', 'PLA', 'BSB'],
-    ['L1', 'L2', 'L3', 'L4', 'L5'],
-    10
+    ['L1', 'L2', 'L3', 'L4', 'L5']
   );
   const reverse = servicePath(
     'PW-BSB-ATM-300',
     'TE-BSB-ATM',
     'LSP-BSB-ATM-01',
     ['BSB', 'PLA', 'MED', 'URU', 'ATM'],
-    ['L5', 'L4', 'L11', 'L10'],
-    50
+    ['L5', 'L4', 'L11', 'L10']
   );
   frames.push(
     table('jtopology_service_paths', [
@@ -275,6 +291,7 @@ export function demoData(now: number) {
           name: 'CLIENTE-300 · Corporativo',
           localNode: 'ATM',
           vsiId: '300',
+          tunnelPolicy: 'TP-CORPORATIVO-ATM',
           status: 'up',
           observedAt: now,
           dataSource: 'fixture',
@@ -293,13 +310,28 @@ export function demoData(now: number) {
           name: 'CLIENTE-400 · Multiponto',
           localNode: 'ATM',
           vsiId: '400',
+          tunnelPolicy: 'TP-MULTIPONTO-ATM',
           status: 'up',
           observedAt: now,
           dataSource: 'fixture',
         }),
         forward: JSON.stringify([
-          forward,
-          servicePath('PW-ATM-BSB-400', 'TE-ATM-MED', 'LSP-ATM-MED-01', ['ATM', 'URU', 'MED'], ['L10', 'L11'], 20),
+          servicePath(
+            'PW-ATM-BSB-400',
+            'TE-ATM-BSB',
+            'LSP-ATM-BSB-01',
+            ['ATM', 'STM', 'ALQ', 'MED', 'PLA', 'BSB'],
+            ['L1', 'L2', 'L3', 'L4', 'L5'],
+            'TP-MULTIPONTO-ATM'
+          ),
+          servicePath(
+            'PW-ATM-MED-400',
+            'TE-ATM-MED',
+            'LSP-ATM-MED-01',
+            ['ATM', 'URU', 'MED'],
+            ['L10', 'L11'],
+            'TP-MULTIPONTO-ATM'
+          ),
         ]),
         reverse: '[]',
         multipleActivePaths: true,

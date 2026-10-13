@@ -1,13 +1,14 @@
 # j-topologia
 
-Plugin Grafana independente para investigar serviços de transporte: **VSI → PW → túnel → CR-LSP ativo → saltos → interfaces**. ID: `jakson-j-topologia-panel`. Versão inicial de laboratório: **0.1.0**.
+Plugin Grafana independente para investigar serviços de transporte: **VSI → PW → tunnel policy → túnel → CR-LSP ativo → saltos → interfaces**. ID: `jakson-j-topologia-panel`. Versão de laboratório: **0.2.0**.
 
 O JMAP (`jakson-jmap-panel`) permanece separado e intacto. Esta base foi derivada do commit `846b38a7b976560f5c0e56e336649f35c73bfba0`: reaproveita o scaffold Grafana, tokens de tema, leitura de séries, merge de opções, histórico óptico, comparação de datas e detecção de atenuação de 2 dB/5 min. Não há mapa, tiles, Leaflet, clima ou incêndios neste plugin.
 
 ## O que esta versão implementa
 
 - Topologia editável: arrastar, conectar equipamentos, desvios no traçado, curvas/ortogonal/direto, anel/estrela/árvore/grade, zoom, centralizar e tela cheia.
-- Físico, OSPF, MPLS-TE e visão combinada; seleção de VSI com ida/volta/ambos, caminhos assimétricos e múltiplos caminhos conhecidos.
+- Físico, Custos OSPF, VSIs e visão combinada; seleção de VSI com ida/volta/ambos, caminhos assimétricos e múltiplos caminhos conhecidos. Cards mostram Router ID, sem badges OSPF/TE UP/DOWN.
+- Custo de saída por VLANIF e por sentido, IPs privados /30, área/processo e fonte/data da coleta. Relações lógicas não são promovidas a cabos físicos.
 - Detalhes de PW/túnel/LSP/saltos, cost OSPF direcional, origem e idade do dado; interfaces não resolvidas permanecem identificadas como incompletas.
 - Consulta inversa de VSIs dependentes de enlace, túnel ou equipamento, baseada em relações ativas observadas.
 - Tráfego e utilização full duplex (máximo entre RX/TX), erros, descartes, oscilações e potência óptica; comparação RX entre datas e alerta visual de possível atenuação.
@@ -23,6 +24,7 @@ O JMAP (`jakson-jmap-panel`) permanece separado e intacto. Esta base foi derivad
 3. Reinicie o container Grafana e crie um painel do tipo **j-topologia**.
 4. Ative **Laboratório → Demonstração** para explorar a interface. Todos os dados ficam identificados como fictícios.
 5. Selecione **CLIENTE-300** na aba VSIs; alterne **Ida / Volta / Ambos**, investigue um hop e os serviços dependentes de um enlace.
+   Na aba **Custos OSPF**, a Vlanif100 ATM → STM tem custo 10 e STM → ATM tem custo 50; clique em cada sentido para investigar o /30. São exemplos fictícios.
 6. Edite posições e desvios, aplique e **salve o dashboard do Grafana**. Refresh de telemetria não recalcula o layout.
 
 ## Usar a rede real

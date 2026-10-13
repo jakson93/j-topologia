@@ -1,4 +1,4 @@
-import { CollectorState, ServiceAnalysis, ServicePathRecord } from './types';
+import { CollectorState, ServiceAnalysis, ServicePathRecord, ServicePolicy } from './types';
 const decode = (value: unknown) => (typeof value === 'string' ? JSON.parse(value) : value);
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -6,6 +6,18 @@ const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 const optionalText = (value: unknown) => (typeof value === 'string' ? value : undefined);
 const optionalNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+const policy = (v: Record<string, unknown>, now: number, maxAge: number): ServicePolicy => ({
+  tunnelPolicy: optionalText(v.tunnelPolicy),
+  policySource: optionalText(v.policySource),
+  policyObservedAt: optionalNumber(v.policyObservedAt),
+  policyStale:
+    typeof v.tunnelPolicy !== 'string' ||
+    !v.tunnelPolicy ||
+    v.policyStale === true ||
+    typeof v.policyObservedAt !== 'number' ||
+    v.policyObservedAt > now ||
+    now - v.policyObservedAt > maxAge,
+});
 export function serviceAnalysis(
   row: Record<string, unknown>,
   now: number,
@@ -43,6 +55,7 @@ export function serviceAnalysis(
             pwId: String(v.pwId),
             tunnelId: String(v.tunnelId),
             lspId: String(v.lspId),
+            ...policy(v, now, maxAge),
             lspRole: optionalText(v.lspRole),
             dataSource: optionalText(v.dataSource),
             observedAt: optionalNumber(v.observedAt),
@@ -75,6 +88,8 @@ export function serviceAnalysis(
                     ospfCost: optionalNumber(s.ospfCost),
                     costSource: optionalText(s.costSource),
                     costInterface: optionalText(s.costInterface),
+                    costAssociation: optionalText(s.costAssociation),
+                    subnet: optionalText(s.subnet),
                     costObservedAt: optionalNumber(s.costObservedAt),
                     capacityBps: optionalNumber(s.capacityBps),
                     forwardBps: optionalNumber(s.forwardBps),
@@ -95,6 +110,19 @@ export function serviceAnalysis(
     const stale = [...forward, ...reverse].some((p) => p.path?.stale);
     return {
       id: String(row.id ?? vsi.id),
+      pseudowires: (() => {
+        const values = row.pseudowires ? decode(row.pseudowires) : [];
+        return Array.isArray(values)
+          ? values
+              .filter((p) => record(p) && typeof p.id === 'string')
+              .map((p) => ({
+                id: String(p.id),
+                peerRouterId: optionalText(p.peerRouterId),
+                vcId: optionalText(p.vcId),
+                ...policy(p, now, maxAge),
+              }))
+          : [];
+      })(),
       vsi: {
         id: vsi.id,
         name: vsi.name,
@@ -103,6 +131,7 @@ export function serviceAnalysis(
         status: optionalText(vsi.status),
         observedAt: optionalNumber(vsi.observedAt),
         dataSource: optionalText(vsi.dataSource),
+        tunnelPolicy: optionalText(vsi.tunnelPolicy),
       },
       forward,
       reverse,

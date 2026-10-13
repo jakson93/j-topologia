@@ -15,8 +15,8 @@ import { ServiceDirection, ServiceInspector, confidenceLabel } from './ServiceIn
 
 const modes: Array<[ViewMode, string]> = [
   ['physical', 'Físico'],
-  ['ospf', 'OSPF'],
-  ['mpls', 'MPLS-TE'],
+  ['ospf', 'Custos OSPF'],
+  ['mpls', 'VSIs'],
   ['all', 'Tudo'],
 ];
 export function TransportPanel(props: PanelProps<PanelOptions>) {
@@ -34,7 +34,7 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
   const [mode, setMode] = React.useState<ViewMode>(options.mode ?? 'physical');
   const [selected, setSelected] = React.useState<Selection>();
   const [sidebar, setSidebar] = React.useState(options.sidebar !== false);
-  const [tab, setTab] = React.useState<'operation' | 'services' | 'tunnels' | 'ospf' | 'events'>('services');
+  const [tab, setTab] = React.useState<'operation' | 'services' | 'ospf' | 'events'>('services');
   const [filters, setFilters] = React.useState(options.filters ?? { query: '', site: '', group: '', status: '' });
   const [pathMode, setPathMode] = React.useState<PathMode>('primary');
   const [serviceDirection, setServiceDirection] = React.useState<ServiceDirection>('both');
@@ -106,6 +106,9 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
               .filter((l) => l.source === n.id || l.target === n.id)
               .flatMap((l) => [l.name, l.sourceInterface, l.targetInterface]),
             ...snapshot.mplsTunnels.filter((t) => t.source === n.id || t.destination === n.id).map((t) => t.name),
+            ...snapshot.ospfNeighbors
+              .filter((o) => o.localNode === n.id || o.targetNode === n.id)
+              .flatMap((o) => [o.interface, o.localIp, o.neighborIp, o.subnet]),
           ].some((s) => s?.toLowerCase().includes(query))))
   );
   const visibleIds = new Set(visibleNodes.map((n) => n.id));
@@ -228,14 +231,15 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
     ['Sob atenção', troubledLinks, 'degraded'],
     ['Indisponíveis', downLinks, 'down'],
     [
-      'OSPF FULL',
-      `${snapshot.ospfNeighbors.filter((n) => n.state === 'Full').length}/${snapshot.ospfNeighbors.length}`,
-      snapshot.ospfNeighbors.some((n) => n.health === 'down') ? 'down' : 'ok',
+      'Custos coletados',
+      `${snapshot.ospfNeighbors.filter((n) => n.cost !== undefined).length}/${snapshot.ospfNeighbors.length}`,
+      'unknown',
     ],
     [
-      'Túneis UP',
-      `${snapshot.mplsTunnels.filter((t) => t.health === 'ok').length}/${snapshot.mplsTunnels.length}`,
-      snapshot.mplsTunnels.some((t) => t.health === 'down') ? 'down' : 'ok',
+      'VSIs com ida e volta',
+      snapshot.services.filter((s) => s.forward.some((p) => p.path?.actual) && s.reverse.some((p) => p.path?.actual))
+        .length,
+      'unknown',
     ],
     ['VSIs descobertas', snapshot.services.length, 'unknown'],
   ] as const;
@@ -312,7 +316,7 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
                   setSidebar(true);
                 }
                 if (value === 'mpls') {
-                  setTab('tunnels');
+                  setTab('services');
                   setSidebar(true);
                 }
               }}
@@ -576,19 +580,15 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
                 </button>
                 <button
                   role="tab"
-                  aria-selected={tab === 'tunnels'}
-                  aria-pressed={tab === 'tunnels'}
-                  onClick={() => setTab('tunnels')}
-                >
-                  Túneis
-                </button>
-                <button
-                  role="tab"
                   aria-selected={tab === 'ospf'}
                   aria-pressed={tab === 'ospf'}
-                  onClick={() => setTab('ospf')}
+                  onClick={() => {
+                    setTab('ospf');
+                    setMode('ospf');
+                    select(undefined);
+                  }}
                 >
-                  OSPF
+                  Custos OSPF
                 </button>
                 <button
                   role="tab"
@@ -603,7 +603,7 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
             {tab === 'services' && (
               <section className={styles.section}>
                 <h3>Por onde sua VSI passa?</h3>
-                <small>Descoberta automática · VSI → PW → túnel → LSP → saltos</small>
+                <small>Descoberta automática · VSI → PW → tunnel policy → túnel → saltos</small>
                 {!snapshot.services.length && (
                   <p className={styles.warning}>
                     Nenhuma VSI descoberta. Configure o collector e a consulta jtopology_service_paths; não é necessário
@@ -614,7 +614,7 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
                   .filter(
                     (service) =>
                       !query ||
-                      [service.vsi.name, service.vsi.localNode, service.vsi.vsiId].some((v) =>
+                      [service.vsi.name, service.vsi.localNode, service.vsi.vsiId, service.vsi.tunnelPolicy].some((v) =>
                         v?.toLowerCase().includes(query)
                       )
                   )
@@ -645,46 +645,10 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
               </section>
             )}
             {tab === 'operation' && summary}
-            {tab === 'tunnels' && (
-              <section className={styles.section}>
-                <h3>Caminhos MPLS-TE</h3>
-                <small>Selecione um túnel para ver saltos, principal e backup.</small>
-                {!snapshot.mplsTunnels.length && (
-                  <p className={styles.warning}>
-                    Túneis ainda não coletados. Interfaces e tráfego não informam o caminho MPLS-TE.
-                  </p>
-                )}
-                {snapshot.mplsTunnels
-                  .filter(
-                    (t) => !query || [t.name, t.source, t.destination].some((s) => s.toLowerCase().includes(query))
-                  )
-                  .slice(0, limit)
-                  .map((t) => (
-                    <button
-                      className={styles.item}
-                      aria-pressed={selected?.id === t.id}
-                      key={t.id}
-                      onClick={() => {
-                        select({ kind: 'tunnel', id: t.id });
-                        setMode('mpls');
-                      }}
-                    >
-                      <div className={styles.row}>
-                        <strong>{t.name}</strong>
-                        <span style={{ color: color(theme, t.health) }}>{healthLabel[t.health]}</span>
-                      </div>
-                      <small>
-                        {t.source} → {t.destination} ·{' '}
-                        {t.primary.complete ? `${t.primary.nodes.length - 1} saltos` : 'saltos não disponíveis'}
-                      </small>
-                      <small>{evidenceLabel(t.primary)}</small>
-                    </button>
-                  ))}
-              </section>
-            )}
             {tab === 'ospf' && (
               <section className={styles.section}>
-                <h3>Vizinhanças OSPF</h3>
+                <h3>Custo por saída / VLANIF</h3>
+                <small>Cada sentido tem seu próprio custo. A linha pontilhada representa o P2P lógico.</small>
                 {!snapshot.ospfNeighbors.length && (
                   <p className={styles.warning}>
                     Sem coleta OSPF. Prepare a consulta conforme o contrato de dados do plugin.
@@ -694,8 +658,8 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
                   .filter(
                     (n) =>
                       !query ||
-                      [n.localNode, n.neighborRouterId, n.interface, n.area, n.state].some((s) =>
-                        s?.toLowerCase().includes(query)
+                      [n.localNode, n.neighborRouterId, n.interface, n.area, n.localIp, n.neighborIp, n.subnet].some(
+                        (s) => s?.toLowerCase().includes(query)
                       )
                   )
                   .slice(0, limit)
@@ -705,10 +669,13 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
                         <strong>
                           {n.localNode} → {n.targetNode ?? n.neighborRouterId}
                         </strong>
-                        <span style={{ color: color(theme, n.health) }}>{n.state}</span>
+                        <span className={styles.badge}>Custo {n.cost ?? '—'}</span>
                       </div>
                       <small>
-                        {n.interface} · área {n.area} · {n.flapCount} quedas
+                        {n.interface} · {n.localIp ?? '—'} → {n.neighborIp ?? '—'}
+                      </small>
+                      <small>
+                        {n.subnet ?? 'Prefixo não coletado'} · área {n.area}
                       </small>
                     </button>
                   ))}

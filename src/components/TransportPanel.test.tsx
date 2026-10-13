@@ -53,9 +53,26 @@ test('demo is explicit; selecting a VSI exposes independent ida/volta controls w
   expect(inspector.getByText('IDA ≠ VOLTA')).toBeInTheDocument();
   expect(inspector.getByText(/IDA · path 1/)).toBeInTheDocument();
   expect(inspector.getByText(/VOLTA · path 1/)).toBeInTheDocument();
+  expect(inspector.getByText('TP-CORPORATIVO-ATM')).toBeInTheDocument();
+  expect(inspector.getByText('TP-CORPORATIVO-BSB')).toBeInTheDocument();
   fireEvent.click(inspector.getByRole('button', { name: 'Volta' }));
   expect(inspector.queryByText(/IDA · path 1/)).not.toBeInTheDocument();
   expect(save).not.toHaveBeenCalled();
+});
+
+test('cost view exposes both VLANIF directions and a private /30 without OSPF or TE status badges', () => {
+  mount();
+  expect(screen.queryByText('OSPF FULL')).not.toBeInTheDocument();
+  expect(screen.queryByText('Túneis UP')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('tab', { name: 'Custos OSPF' }));
+  const outward = screen.getByRole('button', { name: 'Custo OSPF ATM para STM, Vlanif100: 10' });
+  expect(screen.getByRole('button', { name: 'Custo OSPF STM para ATM, Vlanif100: 50' })).toBeInTheDocument();
+  fireEvent.click(outward);
+  const details = within(screen.getByRole('region', { name: 'Detalhes da seleção' }));
+  expect(details.getByText('172.20.0.0/30')).toBeInTheDocument();
+  expect(details.getByText('Custo remoto ←')).toBeInTheDocument();
+  expect(details.getByText('50')).toBeInTheDocument();
+  expect(details.queryByText('Estado observado')).not.toBeInTheDocument();
 });
 test('manual changes are draft-only until Apply and can be cancelled', () => {
   const save = mount();

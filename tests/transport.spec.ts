@@ -15,10 +15,41 @@ test('NOC dashboard has a usable canvas and exposes both service directions with
   await page.screenshot({ path: 'test-results/j-topologia-noc.png', fullPage: false });
   await page.getByRole('button', { name: /CLIENTE-300/ }).click();
   await expect(page.getByRole('region', { name: 'Caminho da VSI' }).getByText('IDA ≠ VOLTA')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Caminho da VSI' }).getByText('TP-CORPORATIVO-ATM', { exact: true })
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: /ALTAMIRA, S6730-ATM/ })).toBeInViewport();
   await page.screenshot({ path: 'test-results/j-topologia-vsi-ambos-viewport.png', animations: 'disabled' });
 
   expect(errors).toEqual([]);
+});
+
+test('logical /30 circuits expose independent outbound VLANIF costs in real Grafana', async ({ page }) => {
+  await page.goto('/d/jtopologia-lab/?orgId=1&kiosk=true');
+  await page.getByRole('tab', { name: 'Custos OSPF' }).click();
+  await expect(page.getByRole('button', { name: 'Custo OSPF ATM para STM, Vlanif100: 10' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Custo OSPF STM para ATM, Vlanif100: 50' })).toBeVisible();
+  const cost = await page.getByRole('button', { name: 'Custo OSPF STM para ALQ, Vlanif101: 15' }).boundingBox();
+  for (const name of [/SANTARÉM, S6730-STM/, /ALENQUER, S6730-ALQ/]) {
+    const node = await page.getByRole('button', { name }).boundingBox();
+    expect(
+      Boolean(
+        cost &&
+        node &&
+        cost.x < node.x + node.width &&
+        cost.x + cost.width > node.x &&
+        cost.y < node.y + node.height &&
+        cost.y + cost.height > node.y
+      )
+    ).toBe(false);
+  }
+  await expect(page.getByText('OSPF FULL', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Custo OSPF ATM para STM, Vlanif100: 10' }).click();
+  const inspector = page.getByRole('region', { name: 'Detalhes da seleção' });
+  await expect(inspector.getByText('172.20.0.0/30', { exact: true })).toBeVisible();
+  await expect(inspector.getByText('Custo remoto ←')).toBeVisible();
+  await expect(inspector.getByText('50', { exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/j-topologia-custos.png', animations: 'disabled' });
 });
 
 test('VSI inspection highlights independent forward and reverse actual paths', async ({

@@ -2,6 +2,7 @@
 import ipaddress
 import json
 from .models import now_ms
+from .ospf import normalize_costs
 
 def fresh(row, field, at, age):
     meta=row.get('provenance',{}).get(field,{})
@@ -26,6 +27,7 @@ class DependencyGraph:
                 self.aliases.setdefault(alias,set()).add(interface['nodeId'])
         self.links={l['id']:l for l in snapshot.get('links',[])}
         self._discover_links()
+        self.ospf=normalize_costs(snapshot.get('ospf',[]),self.nodes,self.interfaces,self.at,self.age,fresh)
         self.tunnels={t['id']:dict(t) for t in snapshot.get('tunnels',[])}
         for tunnel in self.tunnels.values():
             tunnel['destination']=tunnel.get('destination') or self.resolve(tunnel.get('destinationRouterId'))
@@ -99,14 +101,22 @@ class DependencyGraph:
             links=[l for l in self.links.values() if {l['source'],l['target']}=={a['nodeId'],b['nodeId']} and
                 (not a.get('outgoingInterface') or (l['sourceInterface'] if l['source']==a['nodeId'] else l['targetInterface'])==a['outgoingInterface'])]
             link=links[0] if len(links)==1 else None
-            ospf=[n for n in self.data.get('ospf',[]) if n.get('localNode')==a['nodeId'] and self.resolve(n.get('neighborRouterId'))==b['nodeId'] and
-                (not a.get('outgoingInterface') or n.get('interface')==a.get('outgoingInterface')) and fresh(n,'cost',self.at,self.age)]
+            ospf=[n for n in self.ospf if n.get('localNode')==a['nodeId'] and (n.get('targetNode') or self.resolve(n.get('neighborRouterId')))==b['nodeId'] and fresh(n,'cost',self.at,self.age)]
+            # Logical VLANIF and LFIB physical out-interface need not have the same name.
+            # Exact next-hop/interface evidence disambiguates parallel logical circuits.
+            exact=[n for n in ospf if n.get('interface')==a.get('outgoingInterface') or a.get('nextHop') and n.get('neighborIp')==a['nextHop']]
+            if a.get('nextHop'):
+                ospf=[n for n in ospf if n.get('neighborIp')==a['nextHop']]
+            elif exact:ospf=exact
+            elif str(a.get('outgoingInterface','')).lower().startswith('vlanif'):ospf=[]
             cost=ospf[0].get('cost') if len(ospf)==1 else None
             segments.append({'source':a['nodeId'],'target':b['nodeId'],'linkId':link['id'] if link else None,
                 'sourceInterface':(link['sourceInterface'] if link['source']==a['nodeId'] else link['targetInterface']) if link else a.get('outgoingInterface'),
                 'targetInterface':(link['targetInterface'] if link['source']==a['nodeId'] else link['sourceInterface']) if link else b.get('incomingInterface'),
                 'ospfCost':cost,'costSource':ospf[0].get('provenance',{}).get('cost',{}).get('dataSource',ospf[0].get('dataSource')) if len(ospf)==1 else None,
                 'costInterface':ospf[0].get('interface') if len(ospf)==1 else None,
+                'costAssociation':('next-hop' if a.get('nextHop') else 'interface' if exact else 'unique-peer') if len(ospf)==1 else None,
+                'subnet':ospf[0].get('subnet') if len(ospf)==1 else None,
                 'costObservedAt':ospf[0].get('provenance',{}).get('cost',{}).get('observedAt',ospf[0].get('observedAt')) if len(ospf)==1 else None,
                 'capacityBps':link.get('capacityBps') if link else None,'rxBps':link.get('rxBps') if link else None,'txBps':link.get('txBps') if link else None,
                 'forwardBps':(link.get('txBps') if link['source']==a['nodeId'] else link.get('rxBps')) if link else None,
@@ -150,7 +160,16 @@ class DependencyGraph:
                     result.append({'pwId':pw['id'],'tunnelId':tunnel['id'],'lspId':lsp['id'],'pathId':path['id'],'lspRole':lsp.get('role'),
                         'distributionPercent':binding.get('distributionPercent') if binding.get('distributionMeasured') is True else None,
                         'discoveryConfidence':path['discoveryConfidence'],'path':path,'dataSource':binding.get('dataSource'),'observedAt':binding.get('observedAt')})
+        for record in result:record.update(self._policy(pw))
         return result
+
+    def _policy(self,pw):
+        service=self.services.get(pw.get('serviceId'),{})
+        owner=pw if pw.get('tunnelPolicy') else service
+        meta=owner.get('provenance',{}).get('tunnelPolicy',{})
+        return {'tunnelPolicy':owner.get('tunnelPolicy'),'policySource':meta.get('dataSource',owner.get('dataSource')),
+            'policyObservedAt':meta.get('observedAt',owner.get('observedAt')),
+            'policyStale':not owner.get('tunnelPolicy') or not fresh(owner,'tunnelPolicy',self.at,self.age)}
 
     def service_path(self,service_id):
         service=self.services.get(service_id)
@@ -176,7 +195,8 @@ class DependencyGraph:
             else:
                 a=[s.get('linkId') for s in actual_forward[0]['segments']];b=[s.get('linkId') for s in actual_reverse[0]['segments']]
                 if all(a) and all(b):asymmetric=a!=list(reversed(b))
-        return {'vsi':service,'forward':forward,'reverse':reverse,'asymmetric':asymmetric,'multipleActivePaths':len(actual_forward)>1 or len(actual_reverse)>1,
+        return {'vsi':service,'pseudowires':[{'id':p['id'],'peerRouterId':p.get('peerRouterId'),'vcId':p.get('vcId'),**self._policy(p)} for p in peers],
+            'forward':forward,'reverse':reverse,'asymmetric':asymmetric,'multipleActivePaths':len(actual_forward)>1 or len(actual_reverse)>1,
             'issues':issues,'discoveryConfidence':'confirmed' if forward and reverse and not issues and all(p.get('discoveryConfidence')=='confirmed' for p in [*forward,*reverse]) else 'incomplete'}
 
     def impact(self,link_id):
@@ -192,6 +212,7 @@ class DependencyGraph:
     def grafana_rows(self):
         output={f'jtopology_{key}':rows for key,rows in self.data.items() if isinstance(rows,list)}
         output['jtopology_links']=list(self.links.values())
+        output['jtopology_ospf']=self.ospf
         output['jtopology_tunnels']=list(self.tunnels.values())
         for tunnel in output['jtopology_tunnels']:
             for role,field in [('primary','primaryPath'),('backup','backupPath')]:
