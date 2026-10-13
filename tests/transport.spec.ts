@@ -12,7 +12,7 @@ test('NOC dashboard has a usable canvas and exposes both service directions with
   expect(box?.height).toBeGreaterThan(250);
   const filter = await page.getByLabel('Filtrar POP', { exact: true }).boundingBox();
   expect(filter?.height).toBeGreaterThanOrEqual(28);
-  await page.screenshot({ path: 'test-results/j-topologia-noc.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/j-topologia-noc.png', fullPage: false });
   await page.getByRole('button', { name: /CLIENTE-300/ }).click();
   await expect(page.getByRole('region', { name: 'Caminho da VSI' }).getByText('IDA ≠ VOLTA')).toBeVisible();
   await expect(page.getByRole('button', { name: /ALTAMIRA, S6730-ATM/ })).toBeInViewport();
@@ -38,7 +38,7 @@ test('VSI inspection highlights independent forward and reverse actual paths', a
   await inspector.getByRole('button', { name: 'Volta', exact: true }).click();
   await expect(inspector.getByText('IDA · path 1')).toHaveCount(0);
   await expect(inspector.getByText('VOLTA · path 1')).toBeVisible();
-  await page.screenshot({ path: 'test-results/j-topologia-vsi-volta.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/j-topologia-vsi-volta.png', fullPage: false });
 });
 
 test('manual overrides and layout commands remain usable in the Grafana editor', async ({
@@ -74,5 +74,5 @@ test('link inspection keeps optical history and discovers dependent VSI instance
   await expect(inspector.getByRole('button', { name: /CLIENTE-300/ })).toBeAttached();
   await inspector.getByLabel('Métrica do enlace').selectOption('opticalRx');
   await expect(inspector.getByRole('region', { name: 'Comparação de potência RX' })).toBeVisible();
-  await page.screenshot({ path: 'test-results/j-topologia-optico.png', fullPage: true });
+  await page.screenshot({ path: 'test-results/j-topologia-optico.png', fullPage: false });
 });
