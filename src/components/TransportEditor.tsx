@@ -3,17 +3,22 @@ import { useStyles2 } from '@grafana/ui';
 import { NetworkNode, NetworkLink, TopologyInventory } from '../types';
 import { getStyles } from '../styles';
 import { Selection } from './TopologyCanvas';
+import { DataFrame } from '@grafana/data';
+import { MetricSelect } from './MetricSelect';
+import { LINK_METRICS } from './NetworkForms';
 
 export function TransportEditor({
   inventory,
   selected,
   onChange,
   onConnect,
+  data,
 }: {
   inventory: TopologyInventory;
   selected: Selection;
   onChange: (v: TopologyInventory) => void;
   onConnect: (id: string) => void;
+  data?: DataFrame[];
 }) {
   const styles = useStyles2(getStyles);
   const node = selected?.kind === 'node' ? inventory.nodes.find((n) => n.id === selected.id) : undefined;
@@ -50,7 +55,9 @@ export function TransportEditor({
         {node ? (
           <>
             {field('Hostname', node.hostname, (hostname) => changeNode({ hostname }))}
-            {field('POP / localidade', node.site, (site) => changeNode({ site }))}
+            {field('POP / localidade', node.site, (site) =>
+              changeNode({ site, popId: inventory.pops?.find((p) => p.name === site)?.id })
+            )}
             {field('Router ID', node.routerId, (routerId) => changeNode({ routerId }))}
             {field('IP de gerenciamento', node.ip, (ip) => changeNode({ ip }))}
             {field('Modelo', node.model, (model) => changeNode({ model }))}
@@ -67,12 +74,18 @@ export function TransportEditor({
                 <option value="datacenter">Datacenter</option>
               </select>
             </label>
-            {field('Alias da disponibilidade SNMP (1=up / 0=down)', node.bindings?.status, (status) =>
-              changeNode({ bindings: { ...node.bindings, status } })
-            )}
-            {field('Alias do uptime (segundos)', node.bindings?.uptime, (uptime) =>
-              changeNode({ bindings: { ...node.bindings, uptime } })
-            )}
+            <MetricSelect
+              label="Item Zabbix — disponibilidade do equipamento"
+              value={node.bindings?.status}
+              data={data}
+              onChange={(status) => changeNode({ bindings: { ...node.bindings, status } })}
+            />
+            <MetricSelect
+              label="Item Zabbix — uptime"
+              value={node.bindings?.uptime}
+              data={data}
+              onChange={(uptime) => changeNode({ bindings: { ...node.bindings, uptime } })}
+            />
             <button onClick={() => onConnect(node.id)}>Conectar a outro equipamento</button>
             <button
               disabled={
@@ -104,11 +117,16 @@ export function TransportEditor({
                 onChange={(e) => changeLink({ capacityBps: e.target.value ? Number(e.target.value) * 1e9 : undefined })}
               />
             </label>
-            {(['status', 'rx', 'tx', 'latency', 'errors', 'discards', 'opticalRx', 'opticalTx'] as const).map((key) =>
-              field(`Alias ${key}`, link.bindings?.[key], (v) =>
-                changeLink({ bindings: { ...link.bindings, [key]: v } })
-              )
-            )}
+            {LINK_METRICS.map(([key, label, unit]) => (
+              <MetricSelect
+                key={key}
+                label={`Item Zabbix — ${label}`}
+                description={unit}
+                value={link.bindings?.[key]}
+                data={data}
+                onChange={(value) => changeLink({ bindings: { ...link.bindings, [key]: value } })}
+              />
+            ))}
             <small>RX/TX em bps; erros e descartes já convertidos para taxas/s. Potência óptica em dBm.</small>
             <button onClick={() => changeLink({ points: [] })}>Limpar desvios do traçado</button>
             <button onClick={() => onChange({ ...inventory, links: inventory.links.filter((l) => l.id !== link.id) })}>

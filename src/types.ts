@@ -3,8 +3,9 @@ export type ViewMode = 'physical' | 'ospf' | 'mpls' | 'all';
 export type Point = { x: number; y: number };
 export type MetricKey = 'rx' | 'tx' | 'latency' | 'errors' | 'discards' | 'opticalRx' | 'opticalTx';
 /** Values must already be rates, except optical power (dBm) and latency (ms). */
-export type Bindings = Partial<Record<MetricKey | 'status' | 'uptime', string>>;
+export type Bindings = Partial<Record<MetricKey | 'status' | 'uptime' | 'cpu' | 'memory' | 'temperature', string>>;
 export type NetworkNode = {
+  popId?: string;
   overrideFields?: string[];
   id: string;
   hostname: string;
@@ -20,6 +21,8 @@ export type NetworkNode = {
   bindings?: Bindings;
 };
 export type NetworkLink = {
+  sourceOspf?: OspfInterfaceBinding;
+  targetOspf?: OspfInterfaceBinding;
   overrideFields?: string[];
   id: string;
   name: string;
@@ -30,6 +33,13 @@ export type NetworkLink = {
   capacityBps?: number;
   bindings?: Bindings;
   points?: Point[];
+};
+export type OspfInterfaceBinding = {
+  interface?: string;
+  localIp?: string;
+  area?: string;
+  process?: string;
+  costItem?: string;
 };
 export type OspfState = 'Down' | 'Attempt' | 'Init' | '2-Way' | 'ExStart' | 'Exchange' | 'Loading' | 'Full' | 'Unknown';
 export type OspfNeighbor = {
@@ -48,6 +58,7 @@ export type OspfNeighbor = {
   transitions?: number;
   cost?: number;
   costObservedAt?: number;
+  costItem?: string;
   dataSource?: string;
   localRouterId?: string;
   localIp?: string;
@@ -95,13 +106,22 @@ export type NetworkEvent = {
   message: string;
 };
 export type TopologyInventory = {
+  pops?: NetworkPop[];
   nodes: NetworkNode[];
   links: NetworkLink[];
   ospfNeighbors: OspfNeighbor[];
   mplsTunnels: MplsTunnel[];
 };
+export type NetworkPop = { id: string; name: string; region?: string };
 export type NetworkMetric = { times: number[]; values: Array<number | null> };
-export type NodeState = NetworkNode & { health: Health; snmp: Health; uptime?: number };
+export type NodeState = NetworkNode & {
+  health: Health;
+  snmp: Health;
+  uptime?: number;
+  cpu?: number;
+  memory?: number;
+  temperature?: number;
+};
 export type LinkState = NetworkLink & {
   health: Health;
   physical: Health;

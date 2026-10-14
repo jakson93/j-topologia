@@ -360,6 +360,46 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
       subnet: text(row.subnet),
       peerResolution: text(row.peerResolution),
     }));
+    for (const link of linksConfig) {
+      for (const side of ['source', 'target'] as const) {
+        const config = side === 'source' ? link.sourceOspf : link.targetOspf;
+        if (!config?.costItem) {
+          continue;
+        }
+        const local = link[side],
+          target = side === 'source' ? link.target : link.source;
+        const opposite = side === 'source' ? link.targetOspf : link.sourceOspf;
+        const existing = ospfConfigs.find(
+          (n) =>
+            n.localNode === local &&
+            n.interface === config.interface &&
+            (n.targetNode === target || nodes.find((node) => node.id === target)?.routerId === n.neighborRouterId)
+        );
+        const patch = {
+          costItem: config.costItem,
+          cost: value(config.costItem),
+          costObservedAt: read(config.costItem)?.sampleTime,
+          dataSource: 'Zabbix / consulta Grafana',
+          linkId: link.id,
+          targetNode: target,
+        };
+        if (existing) {
+          Object.assign(existing, patch);
+        } else {
+          ospfConfigs.push({
+            id: `configured-cost:${link.id}:${side}`,
+            localNode: local,
+            neighborRouterId: nodes.find((n) => n.id === target)?.routerId ?? '',
+            interface: config.interface || 'VLANIF não informada',
+            localIp: config.localIp,
+            neighborIp: opposite?.localIp,
+            area: config.area ?? '',
+            process: config.process,
+            ...patch,
+          });
+        }
+      }
+    }
     const ospfNeighbors = ospfConfigs.map((n) => {
       const r = read(n.stateItem);
       const time = r?.sampleTime ?? n.observedAt;
@@ -382,6 +422,7 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
       const flapCount = history(n.stateItem, 'ospf', n.id, (v) => ospfHealth(ospfState(v), n.expectedState));
       return {
         ...n,
+        cost: n.costItem ? value(n.costItem) : n.cost,
         linkId,
         state,
         observedAt: time,
@@ -464,6 +505,9 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
         snmp,
         health: snmp === 'unknown' || snmp === 'down' ? ('unknown' as const) : worst([snmp, ...related]),
         uptime: value(n.bindings?.uptime) ?? numeric(row?.uptime),
+        cpu: value(n.bindings?.cpu),
+        memory: value(n.bindings?.memory),
+        temperature: value(n.bindings?.temperature),
       };
     });
     for (const row of tableRows('events')) {
@@ -495,6 +539,31 @@ export class GrafanaTopologyDataProvider implements TopologyDataProvider {
         const service = serviceAnalysis(row, now, maxAge);
         if (!service) {
           warnings.push('Uma análise de VSI inválida foi ignorada.');
+        }
+        if (service) {
+          for (const record of [...service.forward, ...service.reverse]) {
+            record.path?.segments.forEach((segment) => {
+              const candidates = ospfNeighbors.filter(
+                (n) =>
+                  n.costItem &&
+                  n.linkId === segment.linkId &&
+                  n.localNode === segment.source &&
+                  n.targetNode === segment.target
+              );
+              if (candidates.length === 1) {
+                const n = candidates[0];
+                Object.assign(segment, {
+                  ospfCost: n.cost,
+                  costInterface: n.interface,
+                  costSource: n.dataSource,
+                  costObservedAt: n.costObservedAt,
+                  localIp: n.localIp,
+                  neighborIp: n.neighborIp,
+                  costAssociation: 'configured-interface',
+                });
+              }
+            });
+          }
         }
         return service ? [service] : [];
       }),

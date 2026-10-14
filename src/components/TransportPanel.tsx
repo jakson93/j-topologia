@@ -132,6 +132,7 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
       ...effectiveInventory,
       nodes: snapshot.nodes.map((n) => ({
         id: n.id,
+        popId: n.popId,
         hostname: n.hostname,
         site: n.site,
         routerId: n.routerId,
@@ -147,6 +148,8 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
       })),
       links: snapshot.links.map((l) => ({
         id: l.id,
+        sourceOspf: l.sourceOspf,
+        targetOspf: l.targetOspf,
         name: l.name,
         source: l.source,
         target: l.target,
@@ -528,6 +531,7 @@ export function TransportPanel(props: PanelProps<PanelOptions>) {
           >
             {draft && (
               <TransportEditor
+                data={frames}
                 inventory={draft}
                 selected={selected}
                 onChange={changeDraft}

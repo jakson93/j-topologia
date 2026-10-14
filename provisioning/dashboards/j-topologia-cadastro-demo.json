@@ -1,0 +1,133 @@
+{
+  "uid": "jtopologia-config-lab",
+  "title": "j-topologia - LABORATORIO de cadastros e itens",
+  "schemaVersion": 41,
+  "version": 1,
+  "tags": [
+    "j-topologia",
+    "laboratorio",
+    "dados-sinteticos"
+  ],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "jakson-j-topologia-panel",
+      "title": "LABORATORIO - POPs, rotas e itens das consultas (dados sintéticos)",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 25
+      },
+      "options": {
+        "demo": false,
+        "mode": "physical",
+        "sidebar": true,
+        "inventory": {
+          "pops": [
+            {
+              "id": "config-pop-a",
+              "name": "POP ALTAMIRA"
+            },
+            {
+              "id": "config-pop-b",
+              "name": "POP SANTAREM"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "config-a",
+              "popId": "config-pop-a",
+              "site": "POP ALTAMIRA",
+              "hostname": "S6730-ATM",
+              "routerId": "10.40.40.1",
+              "icon": "switch",
+              "position": {
+                "x": 200,
+                "y": 200
+              },
+              "bindings": {
+                "status": "ATM estado",
+                "cpu": "ATM CPU",
+                "memory": "ATM memoria"
+              }
+            },
+            {
+              "id": "config-b",
+              "popId": "config-pop-b",
+              "site": "POP SANTAREM",
+              "hostname": "S6730-STM",
+              "routerId": "10.40.40.2",
+              "icon": "switch",
+              "position": {
+                "x": 650,
+                "y": 200
+              },
+              "bindings": {
+                "status": "ATM estado"
+              }
+            }
+          ],
+          "links": [
+            {
+              "id": "config-ab",
+              "name": "ALTAMIRA - SANTAREM",
+              "source": "config-a",
+              "target": "config-b",
+              "sourceInterface": "XGE0/0/1",
+              "targetInterface": "XGE0/0/2",
+              "capacityBps": 10000000000,
+              "bindings": {
+                "status": "ATM estado",
+                "rx": "ATM RX",
+                "tx": "ATM TX",
+                "opticalRx": "ATM sinal RX"
+              },
+              "sourceOspf": {
+                "interface": "Vlanif100",
+                "localIp": "172.20.0.1",
+                "area": "0.0.0.0",
+                "costItem": "ATM custo"
+              },
+              "targetOspf": {
+                "interface": "Vlanif100",
+                "localIp": "172.20.0.2",
+                "area": "0.0.0.0",
+                "costItem": "STM custo"
+              }
+            }
+          ],
+          "ospfNeighbors": [],
+          "mplsTunnels": []
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "jtopologia-config-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "Time,ATM estado,ATM RX,ATM TX,ATM sinal RX,ATM custo,STM custo,ATM CPU,ATM memoria\n${__to},1,6000000000,3000000000,-19,10,80,25,40",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "jtopologia-config-testdata"
+      }
+    }
+  ],
+  "description": "Dados SINTETICOS via Grafana TestData. Demonstra cadastro pelas Options e itens de Queries; nenhuma conexão ao Zabbix real."
+}

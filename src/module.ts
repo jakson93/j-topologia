@@ -7,8 +7,8 @@ export const plugin = new PanelPlugin<PanelOptions>(TransportPanel).setPanelOpti
   builder.addCustomEditor({
     id: 'inventory',
     path: 'inventory',
-    name: 'Inventário e bindings',
-    category: ['Rede de transporte'],
+    name: 'POPs, equipamentos e rotas',
+    category: ['Cadastro da rede'],
     defaultValue: EMPTY_INVENTORY,
     editor: InventoryEditor,
   });

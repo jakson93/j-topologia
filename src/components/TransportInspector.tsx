@@ -166,6 +166,9 @@ export function TransportInspector({
             {fact('IP', node.ip || 'Não informado')}
             {fact('Modelo', node.model || 'Não informado')}
             {fact('SNMP', healthLabel[node.snmp])}
+            {fact('CPU', node.cpu === undefined ? '—' : `${node.cpu}%`)}
+            {fact('Memória', node.memory === undefined ? '—' : `${node.memory}%`)}
+            {fact('Temperatura', node.temperature === undefined ? '—' : `${node.temperature} °C`)}
             {fact(
               'Uptime',
               node.uptime === undefined

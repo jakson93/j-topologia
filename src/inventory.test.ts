@@ -40,6 +40,8 @@ test('imports JMAP topology and Zabbix aliases but never guesses endpoints from 
   };
   const result = importJmap(JSON.stringify(input));
   expect(result.inventory.links).toHaveLength(1);
+  expect(result.inventory.pops).toHaveLength(2);
+  expect(result.inventory.nodes.map((n) => n.id)).toEqual(['a:r1', 'b']);
   expect(result.inventory.links[0].bindings?.opticalRx).toBe('AB.opticalRx');
   expect(result.warnings.some((w) => w.includes('Sem extremos'))).toBe(true);
 });

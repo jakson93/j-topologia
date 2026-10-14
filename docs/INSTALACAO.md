@@ -2,7 +2,7 @@
 
 ## Painel Grafana
 
-Extraia `jakson-j-topologia-panel-0.2.0.zip` em `/var/lib/grafana/plugins`. O arquivo `plugin.json` deve ficar em `/var/lib/grafana/plugins/jakson-j-topologia-panel/plugin.json`.
+Extraia `jakson-j-topologia-panel-0.3.0.zip` em `/var/lib/grafana/plugins`. O arquivo `plugin.json` deve ficar em `/var/lib/grafana/plugins/jakson-j-topologia-panel/plugin.json`.
 
 No ambiente do serviço Grafana no Portainer:
 

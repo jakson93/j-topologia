@@ -23,12 +23,25 @@ export function parseInventory(text: string): TopologyInventory {
     }
   }
   const nodes = new Set(result.nodes.map((n) => n.id));
+  if (
+    result.pops !== undefined &&
+    (!Array.isArray(result.pops) ||
+      result.pops.some(
+        (p) => !p || typeof p.id !== 'string' || !p.id || typeof p.name !== 'string' || !p.name.trim()
+      ) ||
+      new Set(result.pops.map((p) => p.id)).size !== result.pops.length)
+  ) {
+    throw new Error('POPs: informe nomes e IDs únicos.');
+  }
   const required = (value: unknown, label: string) => {
     if (typeof value !== 'string' || !value.trim()) {
       throw new Error(`${label} obrigatório.`);
     }
   };
   for (const n of result.nodes) {
+    if (n.popId && !result.pops?.some((p) => p.id === n.popId)) {
+      throw new Error(`POP não cadastrado: ${n.hostname}.`);
+    }
     required(n.hostname, 'Hostname');
     required(n.site, 'POP');
     if (n.position && (!Number.isFinite(n.position.x) || !Number.isFinite(n.position.y))) {
@@ -36,6 +49,19 @@ export function parseInventory(text: string): TopologyInventory {
     }
   }
   for (const l of result.links) {
+    for (const config of [l.sourceOspf, l.targetOspf]) {
+      if (
+        config &&
+        (typeof config !== 'object' ||
+          Array.isArray(config) ||
+          Object.values(config).some((v) => typeof v !== 'string'))
+      ) {
+        throw new Error(`Configuração OSPF inválida: ${l.id}.`);
+      }
+      if (config?.costItem && !config.interface?.trim()) {
+        throw new Error('Informe a VLANIF correspondente ao item de custo OSPF.');
+      }
+    }
     required(l.name, 'Nome do enlace');
     required(l.sourceInterface, 'Interface origem');
     required(l.targetInterface, 'Interface destino');
@@ -102,22 +128,38 @@ export function importJmap(text: string): { inventory: TopologyInventory; warnin
   const resolve = (e: { popId?: string; equipmentId?: string } | undefined) =>
     e ? (e.equipmentId ? `${e.popId}:${e.equipmentId}` : e.popId) : undefined;
   for (const pop of source.pops) {
-    inventory.nodes.push({
-      id: pop.id,
-      hostname: pop.name,
-      site: pop.name,
-      region: pop.region,
-      position: pop.topologyPosition,
-    });
+    (inventory.pops ??= []).push({ id: pop.id, name: pop.name, region: pop.region });
+    // A POP container is not a second switch. Keep a node only when it is an explicit endpoint.
+    const usedAsEndpoint = source.routes.some(
+      (r: { source?: { popId?: string; equipmentId?: string }; target?: { popId?: string; equipmentId?: string } }) =>
+        [r.source, r.target].some((e) => e?.popId === pop.id && !e?.equipmentId)
+    );
+    if (!pop.equipments?.length || usedAsEndpoint) {
+      inventory.nodes.push({
+        id: pop.id,
+        popId: pop.id,
+        hostname: pop.name,
+        site: pop.name,
+        region: pop.region,
+        position: pop.topologyPosition,
+      });
+    }
     for (const eq of pop.equipments ?? []) {
       inventory.nodes.push({
         id: `${pop.id}:${eq.id}`,
+        popId: pop.id,
         hostname: eq.name,
         site: pop.name,
         ip: eq.ip,
         model: eq.type,
         position: eq.topologyPosition,
-        bindings: { status: eq.statusItem, uptime: eq.uptimeItem },
+        bindings: {
+          status: eq.statusItem,
+          uptime: eq.uptimeItem,
+          cpu: eq.cpuItem,
+          memory: eq.memoryItem,
+          temperature: eq.temperatureItem,
+        },
       });
     }
   }

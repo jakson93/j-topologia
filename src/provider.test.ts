@@ -48,6 +48,24 @@ test('missing telemetry never becomes healthy or zero traffic', () => {
   expect(snap.links[0].utilization).toBeUndefined();
   expect(snap.nodes.every((n) => n.health === 'unknown')).toBe(true);
 });
+
+test('configured Zabbix VLANIF cost items drive each direction independently without a collector', () => {
+  const config = inventory();
+  config.links[0].sourceOspf = { interface: 'Vlanif100', localIp: '172.20.0.1', costItem: 'a.cost' };
+  config.links[0].targetOspf = { interface: 'Vlanif100', localIp: '172.20.0.2', costItem: 'b.cost' };
+  const frames = [series('a.cost', [10]), series('b.cost', [80])];
+  const snap = provider.getSnapshot(frames, config, {}, now);
+  expect(snap.ospfNeighbors.find((n) => n.localNode === 'a')).toMatchObject({
+    cost: 10,
+    targetNode: 'b',
+    interface: 'Vlanif100',
+    localIp: '172.20.0.1',
+    neighborIp: '172.20.0.2',
+  });
+  expect(snap.ospfNeighbors.find((n) => n.localNode === 'b')?.cost).toBe(80);
+  const stale = provider.getSnapshot(frames, config, {}, now + 600000);
+  expect(stale.ospfNeighbors.every((n) => n.cost === undefined)).toBe(true);
+});
 test('full duplex utilization is max RX/TX, not their sum, with configurable severity', () => {
   const snap = provider.getSnapshot(
     [series('ab.status', [1]), series('ab.rx', [9.6e9]), series('ab.tx', [8e9])],

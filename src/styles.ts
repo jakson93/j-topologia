@@ -373,6 +373,27 @@ export const getStyles = (t: GrafanaTheme2) => ({
       font-size: ${t.typography.bodySmall.fontSize};
     }
   `,
+  configForm: css`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: ${t.spacing(2)};
+    padding: ${t.spacing(2)};
+    max-height: 65vh;
+    overflow: auto;
+    input,
+    select {
+      width: 100%;
+    }
+    p {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 650px) {
+      grid-template-columns: 1fr;
+    }
+  `,
+  configModal: css`
+    width: min(92vw, ${t.spacing(106)});
+  `,
   path: css`
     display: flex;
     flex-direction: column;

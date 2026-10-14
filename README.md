@@ -1,6 +1,6 @@
 # j-topologia
 
-Plugin Grafana independente para investigar serviços de transporte: **VSI → PW → tunnel policy → túnel → CR-LSP ativo → saltos → interfaces**. ID: `jakson-j-topologia-panel`. Versão de laboratório: **0.2.0**.
+Plugin Grafana independente para investigar serviços de transporte: **VSI → PW → tunnel policy → túnel → CR-LSP ativo → saltos → interfaces**. ID: `jakson-j-topologia-panel`. Versão de laboratório: **0.3.0**.
 
 O JMAP (`jakson-jmap-panel`) permanece separado e intacto. Esta base foi derivada do commit `846b38a7b976560f5c0e56e336649f35c73bfba0`: reaproveita o scaffold Grafana, tokens de tema, leitura de séries, merge de opções, histórico óptico, comparação de datas e detecção de atenuação de 2 dB/5 min. Não há mapa, tiles, Leaflet, clima ou incêndios neste plugin.
 
@@ -16,6 +16,14 @@ O JMAP (`jakson-jmap-panel`) permanece separado e intacto. Esta base foi derivad
 - Adaptadores NETCONF GET, SNMP GET/GETBULK e CLI Huawei com allowlist fixa de comandos `display`.
 
 **Limite de validação:** nenhum Huawei real foi acessado neste desenvolvimento. O perfil CLI cobre os formatos testados e reconhece a identificação VRP **5.170** informada pelo usuário; isso não comprova compatibilidade com todas as releases V200Rxxx. Os modelos YANG Huawei de VSI/TE precisam ser mapeados contra as capabilities e o schema da release instalada. O adapter NETCONF de interfaces IETF e a infraestrutura de mapeamentos estão implementados; a descoberta completa de serviços não é prometida apenas porque a sessão NETCONF abriu. Formatos desconhecidos geram logs e relações incompletas, nunca dados simulados em produção.
+
+## Cadastrar a rede e usar o Zabbix
+
+Abra **Editar painel → Options → Cadastro da rede → POPs, equipamentos e rotas**. Cadastre POPs, adicione os equipamentos e, na aba **Rotas e interfaces**, escolha as duas pontas e seus itens em listas pesquisáveis. Não é necessário editar JSON nem memorizar aliases para o cadastro normal.
+
+As listas mostram os itens que já chegaram das **Queries do painel**, como no JMAP. Inclua as consultas Zabbix primeiro. Disponibilidade, CPU, memória, temperatura, uptime, tráfego, erros/descartes e potência óptica podem ser associados por esses seletores. O custo OSPF também pode vir de dois itens Zabbix, um por saída/VLANIF. O collector continua opcional para essas associações e necessário na arquitetura atual para descobrir os caminhos reais das VSIs.
+
+Veja o [passo a passo de cadastro e Zabbix](docs/CONFIGURACAO-ZABBIX.md). Os cadastros das Options e a edição visual usam o mesmo inventário, com proteção contra sobrescritas concorrentes.
 
 ## Experimentar no Grafana
 

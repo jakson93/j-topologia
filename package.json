@@ -1,6 +1,6 @@
 {
   "name": "j-topologia",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "scripts": {
     "build": "webpack -c ./webpack.config.ts --env production && node scripts/verify-dist.cjs",
     "dev": "webpack -w -c ./webpack.config.ts --env development",

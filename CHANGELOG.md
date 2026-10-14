@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-10-14
+
+- Reintroduz o cadastro por formulários nas Options: POPs, equipamentos, rotas e interfaces, com seletores dos itens retornados pelas Queries.
+- Associa disponibilidade, tráfego, potência, erros, descartes, latência, CPU, memória, temperatura e uptime sem exigir JSON ou digitação de aliases.
+- Permite associar dois itens Zabbix de custo OSPF por rota/VLANIF, preservando a independência entre A → B e B → A e a validade das amostras.
+- Usa o mesmo inventário no cadastro e na edição visual, preserva posições e detecta edições concorrentes.
+- Importação JMAP agrupa equipamentos por POP sem criar um segundo switch para o container quando ele não é uma ponta explícita de rota.
+- Adiciona laboratório com consultas TestData sintéticas e teste E2E que comprova que alterar o item no formulário altera a telemetria do enlace.
+
 ## 0.2.0 — 2026-10-13
 
 - Prioriza VLANIF/custos direcionais e VSIs; remove badges OSPF/TE UP/DOWN e a aba de túneis do fluxo principal. Detalhes do túnel continuam acessíveis pela VSI.

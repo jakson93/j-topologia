@@ -30,6 +30,12 @@ Cada registro em `forward`/`reverse` pode incluir `tunnelPolicy`, `policySource`
 
 Os segmentos incluem `costInterface` (VLANIF), `costAssociation` (`next-hop`, `interface` ou `unique-peer`) e `subnet`. `unique-peer` mostra contexto lógico, sem afirmar o vínculo com a porta física. Com circuitos paralelos sem evidência que os diferencie, o custo do segmento fica desconhecido.
 
+## Cadastro pelas Options
+
+Os formulários em **Cadastro da rede** persistem `inventory.pops`, `inventory.nodes` e `inventory.links`. Equipamentos usam `popId`, além de `site`; inventários antigos sem `pops` continuam funcionando e seus grupos são apresentados pelo `site` existente. O mesmo inventário alimenta a topologia e o editor visual. Os itens dos seletores vêm de `context.data`, não de chamadas diretas ao Zabbix.
+
+Os bindings de equipamento também aceitam `cpu`, `memory` (percentuais) e `temperature` (°C). Enlaces podem conter `sourceOspf`/`targetOspf` com `interface`, `localIp`, `area`, `process`, `costItem`. Cada `costItem` aponta a uma série numérica consultada no Grafana; ausência, conflito de alias ou amostra antiga resultam em custo desconhecido. Esses campos não geram consultas nem descobrem caminhos VSI.
+
 ## Overrides opcionais
 
 ```json
